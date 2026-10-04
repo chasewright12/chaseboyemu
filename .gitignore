@@ -1,0 +1,24 @@
+# Executable and object files
+gbemu
+*.o
+*.d
+*.a
+*.out
+
+# Debug files
+*.dSYM/
+core
+vgcore.*
+
+# ROM's and saves (DO NOT COMMIT THESE GAMES OR TEST ROM'S FILES)
+roms/
+*.gb
+*.gbc
+*.sav
+
+# Editors and specific IDE files
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
