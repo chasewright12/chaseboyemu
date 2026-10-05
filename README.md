@@ -2,7 +2,11 @@
 
 # Chase Boy Emulator
 
-**A Game Boy (DMG) emulator written from scratch in C**
+<img src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGEwOTI2c3l3MW9xczRidGk4NWRjM3BrM3AyaHV3cHp2NmI1emRqZyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/aEUiHbQwoEmc0/giphy.gif" alt="Chase Boy Emu">
+
+**A Game Boy (DMG) emulator written from scratch in C**.
+<br>
+Written by **ChaseWright12**.
 
 ![Language](https://img.shields.io/badge/C-C11-00599C?style=for-the-badge&logo=c&logoColor=white)
 ![Platform](https://img.shields.io/badge/Linux%20%7C%20WSL-FCC624?style=for-the-badge&logo=linux&logoColor=black)
