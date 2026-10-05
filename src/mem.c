@@ -1,4 +1,5 @@
 #include "mem.h"
+#include "timer.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -19,6 +20,7 @@ static int wram_bank(const Mem *mem)
     int b = mem->svbk & 7;
     return b ? b : 1;
 }
+
 static void serial_putc(Mem *mem, uint8_t c)
 {
     fputc(c, stderr);
@@ -39,7 +41,7 @@ uint8_t mem_read(const Mem *mem, uint16_t addr)
 {
     if (addr < 0x8000)
     {
-        /* ROM (without bank switching) */
+        /* ROM (without Bank Switching) */
         return addr < mem->cart->size ? mem->cart->data[addr] : 0xFF;
     }
     if (addr < 0xA000)
@@ -49,7 +51,7 @@ uint8_t mem_read(const Mem *mem, uint16_t addr)
     if (addr < 0xFE00)
     {
         /* WRAM and Echo RAM: 0xE000-0xFDFF mirrors 0xC000-0xDDFF.
-        0xC000 and 0xE000 turn offset 0; 0xD000 anb 0xF000 turn 0x1000. */
+           0xC000 e 0xE000 turns offset 0; 0xD000 and 0xF000 turns 0x1000. */
         uint16_t off = addr & 0x1FFF;
         return off < 0x1000 ? mem->wram[0][off]
                             : mem->wram[wram_bank(mem)][off - 0x1000];
@@ -63,11 +65,13 @@ uint8_t mem_read(const Mem *mem, uint16_t addr)
         switch (addr)
         {
         case 0xFF04:
-            return mem->io[0x04];
+            return (uint8_t)(mem->div_counter >> 8); /* DIV */
+        case 0xFF07:
+            return mem->io[0x07] | 0xF8; /* TAC: bits 3-7 */
         case 0xFF0F:
-            return mem->io[0x0F] | 0xE0;
+            return mem->io[0x0F] | 0xE0; /* IF: bits 5-7 */
         case 0xFF44:
-            return 0x90;
+            return 0x90; /* LY: provisory until PPU doesn't exists */
         case 0xFF4D:
             return mem->cgb ? (uint8_t)(0x7E | mem->double_speed << 7 | (mem->key1 & 1)) : 0xFF;
         case 0xFF4F:
@@ -125,6 +129,14 @@ void mem_write(Mem *mem, uint16_t addr, uint8_t val)
                 return;
             }
             break;
+        case 0xFF04:
+            mem->div_counter = 0;
+            timer_sync(mem);
+            return;
+        case 0xFF07: /* TAC */
+            mem->io[0x07] = val & 7;
+            timer_sync(mem);
+            return;
         case 0xFF4D:
             if (mem->cgb)
                 mem->key1 = val & 1;

@@ -1,10 +1,11 @@
 #include "cart.h"
 #include "mem.h"
 #include "cpu.h"
+#include "timer.h"
 #include <stdio.h>
 #include <string.h>
 
-#define MAX_CYCLES 1000000000ULL
+#define MAX_CYCLES 1000000000ULL   /* limite de seguranca (~4 minutos de Game Boy) */
 
 int main(int argc, char **argv) {
     if (argc < 2) {
@@ -31,9 +32,11 @@ int main(int argc, char **argv) {
         if (doctor) {
             cpu_log_doctor(&cpu);
         }
-        if (cpu_step(&cpu) < 0) {
+        int cycles = cpu_step(&cpu);
+        if (cycles < 0) {
             break;
         }
+        timer_tick(&mem, cycles);   /* os outros componentes acompanham o tempo da CPU */
     }
 
     if (!doctor) {
