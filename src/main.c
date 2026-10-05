@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define MAX_CYCLES 1000000000ULL   /* limite de seguranca (~4 minutos de Game Boy) */
+#define MAX_CYCLES 1000000000ULL
 
 int main(int argc, char **argv) {
     if (argc < 2) {

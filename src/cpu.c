@@ -344,7 +344,7 @@ static int exec_cb(Cpu *cpu)
 
 static int execute(Cpu *cpu, uint8_t op)
 {
-    /* LD r, r' (0x40-0x7F, exceto HALT) */
+    /* LD r, r' (0x40-0x7F, noHALT) */
     if (op >= 0x40 && op <= 0x7F && op != 0x76)
     {
         int dst = (op >> 3) & 7;
@@ -458,8 +458,6 @@ static int execute(Cpu *cpu, uint8_t op)
     case 0xF2:
         cpu->a = rd(cpu, (uint16_t)(0xFF00 + cpu->c));
         return 8; /* LD A, (C) */
-
-    /* Operacoes com SP */
     case 0xE8:
         cpu->sp = sp_plus_e8(cpu, fetch8(cpu));
         return 16; /* ADD SP, e8 */

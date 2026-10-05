@@ -10,7 +10,7 @@
 ![Status](https://img.shields.io/badge/status-work%20in%20progress-orange?style=for-the-badge)
 ![Learning](https://img.shields.io/badge/project-learning-blueviolet?style=for-the-badge)
 
-![Last commit](https://img.shields.io/github/last-commit/chasewrigh12/gbemu?style=flat-square)
+![Last commit](https://img.shields.io/github/last-commit/chasewright12/gbemu?style=flat-square)
 ![Code size](https://img.shields.io/github/languages/code-size/chasewright12/gbemu?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)
 ![PRs](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)
