@@ -2,18 +2,15 @@
 
 # Chase Boy Emulator
 
-**A Game Boy (DMG) emulator written from scratch in C**.
-<br>
-All rights reserved.
-<br>
-**ChaseWright12**
+**A Game Boy (DMG) emulator written from scratch in C**
 
 ![Language](https://img.shields.io/badge/C-C11-00599C?style=for-the-badge&logo=c&logoColor=white)
 ![Platform](https://img.shields.io/badge/Linux%20%7C%20WSL-FCC624?style=for-the-badge&logo=linux&logoColor=black)
+![Build](https://img.shields.io/badge/build-make-4EAA25?style=for-the-badge&logo=gnu&logoColor=white)
 ![Status](https://img.shields.io/badge/status-work%20in%20progress-orange?style=for-the-badge)
 ![Learning](https://img.shields.io/badge/project-learning-blueviolet?style=for-the-badge)
 
-![Last commit](https://img.shields.io/github/last-commit/chasewright12/gbemu?style=flat-square)
+![Last commit](https://img.shields.io/github/last-commit/chasewrigh12/gbemu?style=flat-square)
 ![Code size](https://img.shields.io/github/languages/code-size/chasewright12/gbemu?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)
 ![PRs](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)
@@ -26,7 +23,7 @@ All rights reserved.
 
 ## 📖 About
 
-**Chase Boy Emulator** is a hands-on study project to understand how the Game Boy works under the hood by rebuilding each piece of its hardware in software. I'm building it to learn C, low-level programming and computer architecture. The end goal is to run real games such as Tetris, with video, controls and, last of all, sound.
+**Chase Boy Emulator** is a hands-on study project to understand how the Game Boy Color works under the hood by rebuilding each piece of its hardware in software. I'm building it to learn C, low-level programming and computer architecture. The end goal is to run real games such as Tetris, with video, controls and, last of all, sound.
 
 Because the main goal is learning, the code favors **clarity over performance**: simple structures, no global variables, and each component's state kept in a `struct` passed by pointer.
 
@@ -36,8 +33,8 @@ Because the main goal is learning, the code favors **clarity over performance**:
 |---|:---:|---|
 | ROM loading and header parsing | ✅ | Title, cartridge type and ROM size |
 | Memory bus | ✅ | ROM, VRAM, RAM, Echo RAM, OAM, I/O, HRAM and `IE` |
-| CPU (Sharp LR35902) | 🚧 | Fetch/decode/execute loop and a few opcodes |
-| Timer and interrupts | ⬜ | |
+| CPU (Sharp LR35902) | ✅ | Fetch/decode/execute loop and a few opcodes |
+| Timer and interrupts | 🚧 | |
 | Blargg test ROMs | ⬜ | `cpu_instrs` |
 | PPU (video) | ⬜ | Background, window and sprites |
 | Joypad | ⬜ | |
@@ -156,7 +153,7 @@ The CPU uses the registers `A`, `F`, `B`, `C`, `D`, `E`, `H`, `L`, plus `SP` and
 - [x] Load the ROM and read its header
 - [x] Memory bus
 - [x] CPU structure and first opcodes
-- [ ] Implement all opcodes (including the `0xCB` prefix)
+- [x] Implement all opcodes (including the `0xCB` prefix)
 - [ ] Pass Blargg's `cpu_instrs` tests
 - [ ] Timer and interrupts
 - [ ] Accurate cycle counting (`instr_timing`)
@@ -195,24 +192,23 @@ This project is an emulator and **does not include any ROMs or Nintendo code**. 
 Distributed under the MIT License. See the `LICENSE` file for more details.
 
 ---
- 
+
 <div align="center">
+
 <a href="https://github.com/chasewright12">
-  <img src="https://images.weserv.nl/?url=github.com/chasewright12.png&w=200&h=200&fit=cover&mask=circle" width="200" alt="Lucas" />
+  <img src="https://images.weserv.nl/?url=github.com/chasewright12.png&w=200&h=200&fit=cover&mask=circle" width="150" alt="Lucas" />
 </a>
 
-### Lucas Marques
- 
+### Lucas
+
 Brazilian student passionate about programming and computer science.
 I build software on the side and I'm learning how computers work by creating this emulator from scratch.
- 
-[![GitHub](https://img.shields.io/badge/GitHub-chasewrigh12-181717?style=flat-square&logo=github)](https://github.com/chasewright12)
-[![LinkedIn](https://img.shields.io/badge/lucasmarquesdev-0A66C2?style=flat-square&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lucasmarquesdev/)
 
- 
-**A Brazilian open-source project**.
- 
+[![GitHub](https://img.shields.io/badge/GitHub-chasewright12-181717?style=flat-square&logo=github)](https://github.com/chasewright12)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-lucasmarquesdev-0A66C2?style=flat-square&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lucasmarquesdev/)
+
+
+**A Brazilian open-source project**. 
 If you like the project or learned something from it, consider giving it a star!
- 
+
 </div>
- 
