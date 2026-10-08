@@ -2,7 +2,7 @@
 
 # Chase Boy Emulator
 
-<img src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGEwOTI2c3l3MW9xczRidGk4NWRjM3BrM3AyaHV3cHp2NmI1emRqZyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/aEUiHbQwoEmc0/giphy.gif" alt="Chase Boy Emu">
+<img src="./docs/images/chaseboyemulator.png" width="250">
 
 **A Game Boy emulator written from scratch in C**, DMG first, with Game Boy Color support in progress.
 <br>
@@ -264,7 +264,7 @@ Distributed under the MIT License. See the `LICENSE` file for more details.
   <img src="https://images.weserv.nl/?url=github.com/chasewright12.png&w=200&h=200&fit=cover&mask=circle" width="150" alt="Lucas" />
 </a>
 
-### Lucas
+### Lucas Marques
 
 Brazilian student passionate about programming and computer science.
 I build software on the side and I'm learning how computers work by creating this emulator from scratch.
