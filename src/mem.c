@@ -1,5 +1,6 @@
 #include "mem.h"
 #include "timer.h"
+#include "joypad.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -10,14 +11,20 @@ void mem_init(Mem *mem, const Cart *cart)
     /* Header byte 0x0143: 0x80 = CGB-compatible, 0xC0 = CGB-only */
     mem->cgb = (cart->data[0x0143] & 0x80) != 0;
 
+    /* Palette RAM starts out white (0x7FFF) */
+    for (int i = 0; i < 64; i += 2)
+    {
+        mem->bg_pal[i] = mem->obj_pal[i] = 0xFF;
+        mem->bg_pal[i + 1] = mem->obj_pal[i + 1] = 0x7F;
+    }
+
     /* Video register values left behind by the boot ROM */
     mem->io[0x40] = 0x91; /* LCDC: LCD on, BG on, tile data at 0x8000 */
-    mem->io[0x47] = 0xFC; /* BGP */
-    mem->io[0x48] = 0xFF; /* OBP0 */
-    mem->io[0x49] = 0xFF; /* OBP1 */
+    mem->io[0x47] = 0xFC;
+    mem->io[0x48] = 0xFF;
+    mem->io[0x49] = 0xFF;
 }
 
-/* The DMG only has VRAM bank 0. */
 static int vram_bank(const Mem *mem)
 {
     return mem->cgb ? (mem->vbk & 1) : 0;
@@ -71,11 +78,13 @@ uint8_t mem_read(const Mem *mem, uint16_t addr)
     if (addr < 0xFEA0)
         return mem->oam[addr - 0xFE00];
     if (addr < 0xFF00)
-        return 0xFF; /* prohibited area */
+        return 0xFF;
     if (addr < 0xFF80)
     {
         switch (addr)
         {
+        case 0xFF00:
+            return joypad_read(mem); /* P1: joypad */
         case 0xFF04:
             return (uint8_t)(mem->div_counter >> 8); /* DIV */
         case 0xFF07:
@@ -92,6 +101,16 @@ uint8_t mem_read(const Mem *mem, uint16_t addr)
             return mem->cgb ? (uint8_t)(0xFE | (mem->vbk & 1)) : 0xFF;
         case 0xFF70: /* SVBK: WRAM bank (CGB only) */
             return mem->cgb ? (uint8_t)(0xF8 | (mem->svbk & 7)) : 0xFF;
+        case 0xFF68:
+            return mem->cgb ? (uint8_t)(0x40 | mem->bcps) : 0xFF; /* BCPS */
+        case 0xFF69:
+            return mem->cgb ? mem->bg_pal[mem->bcps & 0x3F] : 0xFF; /* BCPD */
+        case 0xFF6A:
+            return mem->cgb ? (uint8_t)(0x40 | mem->ocps) : 0xFF; /* OCPS */
+        case 0xFF6B:
+            return mem->cgb ? mem->obj_pal[mem->ocps & 0x3F] : 0xFF; /* OCPD */
+        case 0xFF6C:
+            return mem->cgb ? (uint8_t)(0xFE | (mem->opri & 1)) : 0xFF; /* OPRI */
         default:
             return mem->io[addr - 0xFF00];
         }
@@ -135,11 +154,14 @@ void mem_write(Mem *mem, uint16_t addr, uint8_t val)
     {
         switch (addr)
         {
+        case 0xFF00:
+            joypad_write(mem, val);
+            return;
         case 0xFF02: /* SC: starts a serial transfer */
             if (val == 0x81)
             {
-                serial_putc(mem, mem->io[0x01]); /* SB: byte to send */
-                mem->io[0x02] = 0x01;            /* transfer complete */
+                serial_putc(mem, mem->io[0x01]);
+                mem->io[0x02] = 0x01;
                 return;
             }
             break;
@@ -147,9 +169,9 @@ void mem_write(Mem *mem, uint16_t addr, uint8_t val)
             mem->div_counter = 0;
             timer_sync(mem); /* the signal dropping can increment TIMA */
             return;
-        case 0xFF07: /* TAC */
+        case 0xFF07:
             mem->io[0x07] = val & 7;
-            timer_sync(mem); /* changing the frequency can also increment TIMA */
+            timer_sync(mem);
             return;
         case 0xFF41: /* STAT: only bits 3-6 are writable */
             mem->io[0x41] = (uint8_t)((mem->io[0x41] & 0x07) | (val & 0x78));
@@ -177,6 +199,38 @@ void mem_write(Mem *mem, uint16_t addr, uint8_t val)
         case 0xFF70:
             if (mem->cgb)
                 mem->svbk = val & 7;
+            return;
+        case 0xFF68:
+            if (mem->cgb)
+                mem->bcps = val & 0xBF;
+            return;
+        case 0xFF6A:
+            if (mem->cgb)
+                mem->ocps = val & 0xBF;
+            return;
+        case 0xFF69: /* BCPD: writes one palette byte, may auto-increment */
+            if (mem->cgb)
+            {
+                mem->bg_pal[mem->bcps & 0x3F] = val;
+                if (mem->bcps & 0x80)
+                {
+                    mem->bcps = (uint8_t)((mem->bcps & 0x80) | ((mem->bcps + 1) & 0x3F));
+                }
+            }
+            return;
+        case 0xFF6B: /* OCPD: same for sprite palettes */
+            if (mem->cgb)
+            {
+                mem->obj_pal[mem->ocps & 0x3F] = val;
+                if (mem->ocps & 0x80)
+                {
+                    mem->ocps = (uint8_t)((mem->ocps & 0x80) | ((mem->ocps + 1) & 0x3F));
+                }
+            }
+            return;
+        case 0xFF6C:
+            if (mem->cgb)
+                mem->opri = val & 1;
             return;
         default:
             break;

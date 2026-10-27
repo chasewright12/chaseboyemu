@@ -2,15 +2,15 @@
 
 # Chase Boy Emulator
 
-<img src="./docs/images/chaseboyemulator.png" width="250">
+<img src="./docs/images/chaseboyemulator.png" width="250" alt="Chase Boy Emulator logo">
 
-**A Game Boy emulator written from scratch in C**, DMG first, with Game Boy Color support in progress.
-<br>
+**A Game Boy emulator written from scratch in C**, DMG first, with Game Boy Color support in progress.  
 Written by **ChaseWright12**.
 
 ![Language](https://img.shields.io/badge/C-C11-00599C?style=for-the-badge&logo=c&logoColor=white)
 ![Platform](https://img.shields.io/badge/Linux%20%7C%20WSL-FCC624?style=for-the-badge&logo=linux&logoColor=black)
 ![Build](https://img.shields.io/badge/build-make-4EAA25?style=for-the-badge&logo=gnu&logoColor=white)
+![DualShock 4](https://img.shields.io/badge/DualShock%204-supported-2ea44f?style=for-the-badge)
 ![Status](https://img.shields.io/badge/status-work%20in%20progress-orange?style=for-the-badge)
 ![Learning](https://img.shields.io/badge/project-learning-blueviolet?style=for-the-badge)
 
@@ -23,21 +23,21 @@ Written by **ChaseWright12**.
 
 ---
 
-> ⚠️ **Work in progress.** This is a learning project under active development. The CPU, timer and video already pass their test ROMs, but it **cannot play games yet**: there is no joypad input or cartridge bank switching so far. Things will change often (and break). Feedback and suggestions are very welcome.
+> ⚠️ **Work in progress.** This is a learning project under active development. The CPU, timer, and video already pass their test ROMs, and joypad input is supported through the keyboard and SDL2 game controllers, including the **PS4 DualShock 4 over USB**. Cartridge bank switching and other features are still missing, so compatibility with commercial games remains limited. Things will change often (and break). Feedback and suggestions are very welcome.
 
 ## 📖 About
 
-**Chase Boy Emulator** is a hands-on study project to understand how the Game Boy and the Game Boy Color work under the hood by rebuilding each piece of their hardware in software. I'm building it to learn C, low-level programming and computer architecture. The end goal is to run real games such as Tetris, with video, controls and, last of all, sound.
+**Chase Boy Emulator** is a hands-on study project to understand how the Game Boy and the Game Boy Color work under the hood by rebuilding each piece of their hardware in software. I'm building it to learn C, low-level programming, and computer architecture. The end goal is to run real games such as Tetris, with video, controls, and, last of all, sound.
 
 Because the main goal is learning, the code favors **clarity over performance**: simple structures, no global variables, and each component's state kept in a `struct` passed by pointer.
 
 ## 🖼️ Screenshot
 
-The emulator rendering [dmg-acid2](https://github.com/mattcurrie/dmg-acid2), a test ROM that exercises the background, window and sprites. The output matches the official reference image **pixel for pixel**.
+The emulator rendering [dmg-acid2](https://github.com/mattcurrie/dmg-acid2), a test ROM that exercises the background, window, and sprites. The output matches the official reference image **pixel for pixel**.
 
 <div align="center">
 
-<img src="docs/dmg-acid2.png" width="320" alt="dmg-acid2 rendered by the emulator">
+<img src="/docs/images/reference-dmg.png" width="320" alt="dmg-acid2 rendered by the emulator">
 
 </div>
 
@@ -45,45 +45,45 @@ The emulator rendering [dmg-acid2](https://github.com/mattcurrie/dmg-acid2), a t
 
 | Component | Status | Notes |
 |---|:---:|---|
-| ROM loading and header parsing | ✅ | Title, Game Boy / Color mode, cartridge type and ROM size |
-| Memory bus | ✅ | ROM, VRAM, RAM, Echo RAM, OAM, I/O, HRAM, `IE` and OAM DMA |
-| CPU (Sharp LR35902) | ✅ | Full instruction set, `0xCB` prefix, interrupts, `HALT` and delayed `EI` |
-| Timer | ✅ | `DIV`, `TIMA`, `TMA` and `TAC`, including the falling-edge behavior |
+| ROM loading and header parsing | ✅ | Title, Game Boy / Color mode, cartridge type, and ROM size |
+| Memory bus | ✅ | ROM, VRAM, RAM, Echo RAM, OAM, I/O, HRAM, `IE`, and OAM DMA |
+| CPU (Sharp LR35902) | ✅ | Full instruction set, `0xCB` prefix, interrupts, `HALT`, and delayed `EI` |
+| Timer | ✅ | `DIV`, `TIMA`, `TMA`, and `TAC`, including falling-edge behavior |
 | Blargg `cpu_instrs` | ✅ | The 11 individual ROMs pass, in both DMG and Color mode |
 | PPU (video, DMG) | ✅ | Background, window, sprites, STAT/VBlank interrupts. Passes `dmg-acid2` |
 | Screenshots and SDL2 window | ✅ | PNG output works anywhere; the window is optional (`make SDL=1`) |
-| Game Boy Color | 🚧 | Banked VRAM/WRAM, speed switch and CGB start-up state. Color palettes and tile attributes are still missing |
-| Joypad | ⬜ | |
+| Joypad input | ✅ | Keyboard and SDL2 game controllers; PS4 DualShock 4 tested over USB |
+| Game Boy Color | 🚧 | Banked VRAM/WRAM, speed switch, and CGB start-up state. Color palettes and tile attributes are still missing |
 | MBC1 / MBC3 / MBC5 | ⬜ | ROM/RAM bank switching (also needed for the full `cpu_instrs.gb`) |
 | APU (audio) | ⬜ | The 4 sound channels |
-| Saves (battery-backed RAM) | ⬜ | |
+| Saves (battery-backed RAM) | ⬜ | Not implemented yet |
 
 ## 🛠️ Requirements
 
 - A Linux system (or **WSL** on Windows)
 - `gcc` (or `clang`) and `make`
-- *Optional:* `libsdl2-dev`, to open a window
+- `libsdl2-dev` for the graphical window and game controller support
 
 On Ubuntu/WSL:
 
 ```bash
 sudo apt update
 sudo apt install build-essential git
-sudo apt install libsdl2-dev   # optional, for the window
+sudo apt install libsdl2-dev
 ```
 
 ## 🚀 Building and running
 
 ```bash
-# 1. clone the repository
+# 1. Clone the repository
 git clone https://github.com/chasewright12/gbemu.git
 cd gbemu
 
-# 2. build
-make            # no window (headless)
-make SDL=1      # with an SDL2 window
+# 2. Build
+make           # No window (headless)
+make SDL=1     # SDL2 window and game controller support
 
-# 3. run with a ROM
+# 3. Run with a ROM
 ./gbemu path/to/rom.gb
 ```
 
@@ -104,7 +104,19 @@ make clean
 
 Without `SDL=1`, the emulator always runs headless. With it, a window opens at 4x scale, paced at the real Game Boy speed (about 59.7 frames per second). Close it with `Esc`.
 
-> If the window does not open on WSL, check that your WSL has graphical support (WSLg). The `--png` option works either way.
+### 🎮 Controls
+
+Interactive controls require an SDL-enabled build (`make SDL=1`). The keyboard controls remain available alongside SDL2 game controller input. **PS4 DualShock 4 support has been tested over USB.**
+
+| Game Boy control | Keyboard | Controller |
+|---|---|---|
+| D-pad | Arrow keys | D-pad or left analog stick |
+| A / B | `Z` / `X` | Mapped controller action buttons |
+| Start | `Enter` | Start button |
+| Select | `Backspace` | Back/Select button |
+| Quit emulator | `Esc` | — |
+
+> **WSL note:** If the window does not open, check that your WSL installation supports graphical applications through WSLg. USB controller access may require forwarding the device to WSL with [`usbipd-win`](https://github.com/dorssel/usbipd-win). The `--png` option works without a graphical window.
 
 ## 🧪 Testing
 
@@ -113,6 +125,7 @@ ROMs are **not** included in this repository. The tests below use public test RO
 ### CPU and timer: Blargg's `cpu_instrs`
 
 ```bash
+mkdir -p roms
 git clone https://github.com/retrio/gb-test-roms.git roms/gb-test-roms
 
 for rom in roms/gb-test-roms/cpu_instrs/individual/*.gb; do
@@ -123,7 +136,7 @@ done
 
 All 11 ROMs should print `Passed`. A single ROM looks like this (the messages are still in Portuguese):
 
-```
+```text
 Titulo:
 Modo: Game Boy Color (compativel com DMG)
 Tipo do cartucho: 0x01
@@ -131,16 +144,16 @@ Codigo do tamanho da ROM: 0x00
 Tamanho do arquivo: 32768 bytes
 01-special
 
-
 Passed
 Ciclos executados: 9810784 | Quadros: 139
 ```
 
 When a test fails, the ROM prints which opcodes are wrong. The complete `cpu_instrs.gb` (one 64 KB ROM) needs MBC1, which is not implemented yet.
 
-### Video: dmg-acid2
+### Video: `dmg-acid2`
 
 ```bash
+mkdir -p roms
 curl -L -o roms/dmg-acid2.gb https://github.com/mattcurrie/dmg-acid2/releases/download/v1.0/dmg-acid2.gb
 ./gbemu roms/dmg-acid2.gb --frames 60 --png acid.png
 ```
@@ -149,20 +162,21 @@ Open `acid.png` and compare it with the [reference image](https://github.com/mat
 
 ## 🗂️ Project structure
 
-```
+```text
 gbemu/
 ├── Makefile
 ├── README.md
 ├── docs/
-│   └── dmg-acid2.png   # screenshot used in this README
+│   └── dmg-acid2.png   # Screenshot used in this README
 └── src/
-    ├── main.c        # entry point, command-line options and the main loop
-    ├── cart.c/h      # ROM loading and header parsing
-    ├── mem.c/h       # memory bus (address map, banking, DMA, serial port)
-    ├── cpu.c/h       # registers, flags, instructions and interrupts
-    ├── timer.c/h     # DIV, TIMA, TMA and TAC
-    ├── ppu.c/h       # video: timing, background, window and sprites
-    └── png.c/h       # PNG writer (no external library)
+    ├── main.c          # Entry point, command-line options, and main loop
+    ├── cart.c/h        # ROM loading and header parsing
+    ├── mem.c/h         # Memory bus (address map, banking, DMA, serial port)
+    ├── cpu.c/h         # Registers, flags, instructions, and interrupts
+    ├── timer.c/h       # DIV, TIMA, TMA, and TAC
+    ├── ppu.c/h         # Video: timing, background, window, and sprites
+    ├── input.c/h       # Keyboard and SDL2 joypad/controller input
+    └── png.c/h         # PNG writer (no external library)
 ```
 
 ## 🧠 How it works
@@ -190,13 +204,13 @@ The Game Boy CPU sees a single 64 KB address space, but each range of addresses 
 The CPU uses the registers `A`, `F`, `B`, `C`, `D`, `E`, `H`, `L`, plus `SP` and `PC`. The `F` register holds the flags:
 
 | Bit | Flag | Meaning |
-|:---:|:---:|---|
+|:---:|---|---|
 | 7 | `Z` | Zero |
 | 6 | `N` | Subtraction |
 | 5 | `H` | Half-carry |
 | 4 | `C` | Carry |
 
-`cpu_step` first services any pending interrupt, then fetches an opcode, decodes it, executes it and returns the cycles spent. Most opcodes are decoded from their bit patterns instead of one `case` each, which is why the whole instruction set fits in about 600 lines.
+`cpu_step` first services any pending interrupt, then fetches an opcode, decodes it, executes it, and returns the cycles spent. Most opcodes are decoded from their bit patterns instead of one `case` each, which is why the whole instruction set fits in about 600 lines.
 
 ### Timer
 
@@ -204,7 +218,7 @@ The CPU uses the registers `A`, `F`, `B`, `C`, `D`, `E`, `H`, `L`, plus `SP` and
 
 ### PPU
 
-Each line takes 456 dots and goes through three modes (OAM scan, drawing and HBlank), and a frame is 154 lines (144 visible plus 10 of VBlank), or 70224 dots. At the end of the drawing mode each line is rendered in three layers: background, window and sprites (up to 10 per line, with the DMG priority rules). The PPU also raises the VBlank interrupt and the STAT interrupts (HBlank, VBlank, OAM and `LYC=LY`).
+Each line takes 456 dots and goes through three modes (OAM scan, drawing, and HBlank), and a frame is 154 lines (144 visible plus 10 of VBlank), or 70224 dots. At the end of the drawing mode each line is rendered in three layers: background, window, and sprites (up to 10 per line, with the DMG priority rules). The PPU also raises the VBlank interrupt and the STAT interrupts (HBlank, VBlank, OAM, and `LYC=LY`).
 
 Known simplifications: mode 3 always lasts 172 dots, and the CPU can access VRAM and OAM at any time.
 
@@ -216,14 +230,14 @@ Known simplifications: mode 3 always lasts 172 dots, and the CPU can access VRAM
 - [x] Implement all opcodes (including the `0xCB` prefix)
 - [x] Pass Blargg's `cpu_instrs` tests (the 11 individual ROMs)
 - [x] Timer and interrupts
-- [x] PPU for the DMG: background, window and sprites (`dmg-acid2`)
+- [x] PPU for the DMG: background, window, and sprites (`dmg-acid2`)
 - [x] PNG screenshots and an optional SDL2 window
 - [x] Game Boy Color groundwork: VRAM/WRAM banks and speed switch
-- [ ] Joypad via keyboard
+- [x] Joypad input via keyboard and SDL2 game controllers (PS4 DualShock 4 tested over USB)
 - [ ] **Run Tetris** 🎉
 - [ ] MBC1, then MBC3 and MBC5
 - [ ] Accurate cycle counting (`instr_timing`)
-- [ ] Game Boy Color video: palettes, tile attributes and HDMA (`cgb-acid2`)
+- [ ] Game Boy Color video: palettes, tile attributes, and HDMA (`cgb-acid2`)
 - [ ] Audio (APU)
 - [ ] Save files
 
@@ -261,19 +275,18 @@ Distributed under the MIT License. See the `LICENSE` file for more details.
 <div align="center">
 
 <a href="https://github.com/chasewright12">
-  <img src="https://images.weserv.nl/?url=github.com/chasewright12.png&w=200&h=200&fit=cover&mask=circle" width="150" alt="Lucas" />
+  <img src="https://images.weserv.nl/?url=github.com/chasewright12.png&w=200&h=200&fit=cover&mask=circle" width="150" alt="Lucas Marques">
 </a>
 
 ### Lucas Marques
 
-Brazilian student passionate about programming and computer science.
+Brazilian student passionate about programming and computer science.  
 I build software on the side and I'm learning how computers work by creating this emulator from scratch.
 
-[![GitHub](https://img.shields.io/badge/GitHub-chasewright12-181717?style=flat-square&logo=github)](https://github.com/chasewright12)
+[![GitHub](https://img.shields.io/badge/GitHub-chasewright12-181717?style=flat-square&logo=github)](https://github.com/chasewright12)  
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-lucasmarquesdev-0A66C2?style=flat-square&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/lucasmarquesdev/)
 
-
-**A Brazilian open-source project**. 
+**A Brazilian open-source project.**  
 If you like the project or learned something from it, consider giving it a star!
 
 </div>
