@@ -1,6 +1,6 @@
 <div align="center">
 
-# Chase Boy Emulator
+# Chase Boy Emulator | Game Boy Color Emulator
 
 <img src="./docs/images/chaseboyemulator_v2.0.png" width="250" alt="Chase Boy Emulator logo">
 
@@ -11,6 +11,7 @@ Written by **ChaseWright12**.
 ![Platform](https://img.shields.io/badge/Linux%20%7C%20WSL-FCC624?style=for-the-badge&logo=linux&logoColor=black)
 ![Build](https://img.shields.io/badge/build-make-4EAA25?style=for-the-badge&logo=gnu&logoColor=white)
 ![DualShock 4](https://img.shields.io/badge/DualShock%204-supported-2ea44f?style=for-the-badge)
+![Microsoft](https://img.shields.io/badge/Microsoft_Controller%20-supported-2ea44f?style=for-the-badge)
 ![Status](https://img.shields.io/badge/status-work%20in%20progress-orange?style=for-the-badge)
 ![Learning](https://img.shields.io/badge/project-learning-blueviolet?style=for-the-badge)
 ![Last commit](https://img.shields.io/github/last-commit/chasewright12/gbemu?style=flat-square)
@@ -22,11 +23,11 @@ Written by **ChaseWright12**.
 
 ---
 
-> ⚠️ **Work in progress.** This is a learning project under active development. The CPU, timer, and video already pass their test ROMs, and joypad input is supported through the keyboard and SDL2 game controllers, including the **PS4 DualShock 4 over USB**. Cartridge bank switching and other features are still missing, so compatibility with commercial games remains limited. Things will change often (and break). Feedback and suggestions are very welcome.
+> ⚠️ **Work in progress.** This is a learning project under active development. The CPU, timer, and DMG video already pass their current test ROMs. Joypad input is supported through the keyboard and SDL2 game controllers, including the **PS4 DualShock 4 and Microsoft Driver Conrollers over USB**. Cartridge support now includes **MBC1, MBC3, and MBC5** with ROM/RAM bank switching. Game Boy Color video, audio, save persistence, and further hardware accuracy are still in progress. Compatibility with commercial games is not guaranteed yet. Things will change often (and break). Feedback and suggestions are very welcome.
 
 ## 📖 About
 
-**Chase Boy Emulator** is a hands-on study project to understand how the Game Boy and the Game Boy Color work under the hood by rebuilding each piece of their hardware in software. I'm building it to learn C, low-level programming, and computer architecture. The end goal is to run real games such as Tetris, with video, controls, and, last of all, sound.
+**Chase Boy Emulator** is a hands-on study project to understand how the Game Boy and the Game Boy Color work under the hood by rebuilding each piece of their hardware in software. I'm building it to learn C, low-level programming, and computer architecture. The goal is to run real games with video, controls, and, last of all, sound.
 
 Because the main goal is learning, the code favors **clarity over performance**: simple structures, no global variables, and each component's state kept in a `struct` passed by pointer.
 
@@ -36,26 +37,44 @@ The emulator rendering [dmg-acid2](https://github.com/mattcurrie/dmg-acid2), a t
 
 <div align="center">
 
-<img src="/docs/images/reference-dmg.png" width="320" alt="dmg-acid2 rendered by the emulator">
+<img src="./docs/images/reference-dmg.png" width="320" alt="dmg-acid2 rendered by the emulator">
 
 </div>
+
+The emulator successfully passes the DMG-ACID2 test. The "01-special Passed" message confirms that the tested rendering behavior meets the ROM's expected result.
+
+<div align="center">
+
+<img src="./docs/images/teste.png" width="320" alt="dmg-acid2 rendered by the emulator">
+
+</div>
+
+The emulator rendering a gameplay for "Pokemon Gold Version (2000)" as DMG (Game Boy Color).
+
+
+<div align="center">
+
+<img src="./docs/images/pokemon_screenshot_chaseboyemulator.png" width="320" alt="dmg-acid2 rendered by the emulator">
+
+</div>
+
 
 ## ✨ Current status
 
 | Component | Status | Notes |
 |---|:---:|---|
 | ROM loading and header parsing | ✅ | Title, Game Boy / Color mode, cartridge type, and ROM size |
-| Memory bus | ✅ | ROM, VRAM, RAM, Echo RAM, OAM, I/O, HRAM, `IE`, and OAM DMA |
+| Memory bus | ✅ | ROM, VRAM, cartridge RAM, WRAM, Echo RAM, OAM, I/O, HRAM, `IE`, and OAM DMA |
 | CPU (Sharp LR35902) | ✅ | Full instruction set, `0xCB` prefix, interrupts, `HALT`, and delayed `EI` |
 | Timer | ✅ | `DIV`, `TIMA`, `TMA`, and `TAC`, including falling-edge behavior |
 | Blargg `cpu_instrs` | ✅ | The 11 individual ROMs pass, in both DMG and Color mode |
 | PPU (video, DMG) | ✅ | Background, window, sprites, STAT/VBlank interrupts. Passes `dmg-acid2` |
 | Screenshots and SDL2 window | ✅ | PNG output works anywhere; the window is optional (`make SDL=1`) |
 | Joypad input | ✅ | Keyboard and SDL2 game controllers; PS4 DualShock 4 tested over USB |
-| Game Boy Color | 🚧 | Banked VRAM/WRAM, speed switch, and CGB start-up state. Color palettes and tile attributes are still missing |
-| MBC1 / MBC3 / MBC5 | ⬜ | ROM/RAM bank switching (also needed for the full `cpu_instrs.gb`) |
+| Cartridge controllers | ✅ | MBC1, MBC3, and MBC5 ROM/RAM bank switching |
+| Game Boy Color | 🚧 | Banked VRAM/WRAM and speed switch implemented; color palettes, tile attributes, and other CGB features remain incomplete |
 | APU (audio) | ⬜ | The 4 sound channels |
-| Saves (battery-backed RAM) | ⬜ | Not implemented yet |
+| Saves (battery-backed RAM) | ⬜ | Persistent cartridge RAM and save files not implemented yet |
 
 ## 🛠️ Requirements
 
@@ -133,21 +152,7 @@ for rom in roms/gb-test-roms/cpu_instrs/individual/*.gb; do
 done
 ```
 
-All 11 ROMs should print `Passed`. A single ROM looks like this (the messages are still in Portuguese):
-
-```text
-Titulo:
-Modo: Game Boy Color (compativel com DMG)
-Tipo do cartucho: 0x01
-Codigo do tamanho da ROM: 0x00
-Tamanho do arquivo: 32768 bytes
-01-special
-
-Passed
-Ciclos executados: 9810784 | Quadros: 139
-```
-
-When a test fails, the ROM prints which opcodes are wrong. The complete `cpu_instrs.gb` (one 64 KB ROM) needs MBC1, which is not implemented yet.
+All 11 individual ROMs should print `Passed`. The complete `cpu_instrs.gb` also exercises cartridge banking, so it is useful for checking MBC1 support.
 
 ### Video: `dmg-acid2`
 
@@ -159,6 +164,24 @@ curl -L -o roms/dmg-acid2.gb https://github.com/mattcurrie/dmg-acid2/releases/do
 
 Open `acid.png` and compare it with the [reference image](https://github.com/mattcurrie/dmg-acid2/blob/master/img/reference-dmg.png). They should be identical.
 
+### Cartridge controllers: MBC1, MBC3, and MBC5
+
+Use homebrew and public test ROMs to verify bank switching and cartridge behavior. The ROM header's cartridge type byte identifies the controller:
+
+| Header type | Controller |
+|---|---|
+| `0x01`–`0x03` | MBC1 |
+| `0x0F`–`0x13` | MBC3 |
+| `0x19`–`0x1E` | MBC5 |
+
+For example, run a ROM with:
+
+```bash
+./gbemu roms/game.gb
+```
+
+Check the printed cartridge type and test ROM behavior. MBC3 RTC ticking/latching details, battery-backed save persistence, and some controller-specific hardware behavior may still need further implementation and testing.
+
 ## 🗂️ Project structure
 
 ```text
@@ -166,16 +189,24 @@ gbemu/
 ├── Makefile
 ├── README.md
 ├── docs/
-│   └── dmg-acid2.png   # Screenshot used in this README
+│   └── images/
+│       ├── chaseboyemulator_v2.0.png
+│       └── reference-dmg.png
 └── src/
-    ├── main.c          # Entry point, command-line options, and main loop
-    ├── cart.c/h        # ROM loading and header parsing
-    ├── mem.c/h         # Memory bus (address map, banking, DMA, serial port)
-    ├── cpu.c/h         # Registers, flags, instructions, and interrupts
-    ├── timer.c/h       # DIV, TIMA, TMA, and TAC
-    ├── ppu.c/h         # Video: timing, background, window, and sprites
-    ├── input.c/h       # Keyboard and SDL2 joypad/controller input
-    └── png.c/h         # PNG writer (no external library)
+    ├── main.c              # Entry point, command-line options, and main loop
+    ├── cart.c / cart.h    # ROM loading and header parsing
+    ├── mem.c / mem.h      # Memory bus, address map, DMA, and I/O
+    ├── cpu.c / cpu.h      # Registers, flags, instructions, and interrupts
+    ├── timer.c / timer.h  # DIV, TIMA, TMA, and TAC
+    ├── ppu.c / ppu.h      # Video: timing, background, window, and sprites
+    ├── input.c / input.h  # Keyboard and SDL2 joypad/controller input
+    ├── joypad.c / joypad.h# Joypad register and button state
+    ├── png.c / png.h      # PNG writer (no external library)
+    └── cartridge/
+        ├── cartridge.c / cartridge.h # Cartridge interface and controller selection
+        ├── mbc1.c / mbc1.h           # MBC1 bank switching
+        ├── mbc3.c / mbc3.h           # MBC3 bank switching and RTC registers
+        └── mbc5.c / mbc5.h           # MBC5 bank switching
 ```
 
 ## 🧠 How it works
@@ -190,13 +221,23 @@ The Game Boy CPU sees a single 64 KB address space, but each range of addresses 
 |---|---|
 | `0x0000`–`0x7FFF` | Cartridge ROM |
 | `0x8000`–`0x9FFF` | VRAM (two banks on Color) |
-| `0xA000`–`0xBFFF` | Cartridge RAM |
+| `0xA000`–`0xBFFF` | Cartridge RAM / RTC registers (depending on controller) |
 | `0xC000`–`0xDFFF` | WRAM (eight banks on Color) |
 | `0xE000`–`0xFDFF` | Echo RAM (mirror of WRAM) |
 | `0xFE00`–`0xFE9F` | OAM (sprites) |
 | `0xFF00`–`0xFF7F` | I/O registers |
 | `0xFF80`–`0xFFFE` | HRAM |
 | `0xFFFF` | Interrupt enable register |
+
+### Cartridge and memory bank controllers
+
+Cartridge access is handled through a separate cartridge interface in `src/cartridge/`. The interface identifies the controller from the ROM header and dispatches reads and writes to the appropriate implementation.
+
+- **MBC1:** ROM bank selection and switchable external RAM banks.
+- **MBC3:** ROM bank selection, RAM bank selection, and RTC register selection/latching support.
+- **MBC5:** 9-bit ROM bank selection and switchable RAM banks, with rumble-cartridge type recognition.
+
+The cartridge controller maps the selected ROM or RAM bank into the CPU's address space. Battery-backed RAM persistence and complete RTC behavior are separate features and are not yet considered complete.
 
 ### CPU
 
@@ -233,12 +274,13 @@ Known simplifications: mode 3 always lasts 172 dots, and the CPU can access VRAM
 - [x] PNG screenshots and an optional SDL2 window
 - [x] Game Boy Color groundwork: VRAM/WRAM banks and speed switch
 - [x] Joypad input via keyboard and SDL2 game controllers (PS4 DualShock 4 tested over USB)
-- [ ] **Run Tetris** 🎉
-- [ ] MBC1, then MBC3 and MBC5
+- [x] MBC1, MBC3, and MBC5 cartridge support (initial bank switching implementation)
+- [ ] Run commercial games reliably, including Tetris
 - [ ] Accurate cycle counting (`instr_timing`)
 - [ ] Game Boy Color video: palettes, tile attributes, and HDMA (`cgb-acid2`)
 - [ ] Audio (APU)
-- [ ] Save files
+- [ ] Battery-backed RAM persistence and save files
+- [ ] Complete MBC3 RTC behavior and broader cartridge compatibility
 
 ## 🤝 Contributing
 
