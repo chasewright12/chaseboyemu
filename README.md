@@ -2,7 +2,7 @@
 
 # Chase Boy Emulator
 
-<img src="./docs/images/chaseboyemulator.png" width="250" alt="Chase Boy Emulator logo">
+<img src="./docs/images/chaseboyemulator_v2.0.png" width="250" alt="Chase Boy Emulator logo">
 
 **A Game Boy emulator written from scratch in C**, DMG first, with Game Boy Color support in progress.  
 Written by **ChaseWright12**.
@@ -13,7 +13,6 @@ Written by **ChaseWright12**.
 ![DualShock 4](https://img.shields.io/badge/DualShock%204-supported-2ea44f?style=for-the-badge)
 ![Status](https://img.shields.io/badge/status-work%20in%20progress-orange?style=for-the-badge)
 ![Learning](https://img.shields.io/badge/project-learning-blueviolet?style=for-the-badge)
-
 ![Last commit](https://img.shields.io/github/last-commit/chasewright12/gbemu?style=flat-square)
 ![Code size](https://img.shields.io/github/languages/code-size/chasewright12/gbemu?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)

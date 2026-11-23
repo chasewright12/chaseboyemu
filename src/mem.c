@@ -4,10 +4,115 @@
 #include <stdio.h>
 #include <string.h>
 
+static int cart_uses_mbc1(const Cart *cart)
+{
+    if (!cart || !cart->data || cart->size < 0x150)
+        return 0;
+
+    uint8_t type = cart->data[0x0147];
+
+    return type == 0x01 || type == 0x02 || type == 0x03;
+}
+
+static uint32_t mbc1_ram_size_from_header(const Cart *cart)
+{
+    if (!cart || !cart->data || cart->size < 0x150)
+        return 0;
+
+    if (cart->data[0x0147] == 0x01)
+        return 0;
+
+    switch (cart->data[0x0149])
+    {
+    case 0x01:
+        return 0x0800; /* 2 KiB */
+
+    case 0x02:
+        return 0x2000; /* 8 KiB */
+
+    case 0x03:
+        return 0x8000; /* 32 KiB */
+
+    default:
+        return 0;
+    }
+}
+
+static uint8_t mbc1_rom_read(const Mem *mem, uint16_t addr)
+{
+    size_t bank_count = (mem->cart->size + 0x3FFF) / 0x4000;
+
+    if (bank_count == 0)
+        return 0xFF;
+
+    size_t bank;
+
+    if (addr < 0x4000)
+    {
+        bank = mem->mbc1_mode
+                   ? ((size_t)mem->mbc1_bank_high2 << 5)
+                   : 0;
+    }
+    else
+    {
+        uint8_t low = mem->mbc1_rom_low5 & 0x1F;
+
+        if (low == 0)
+            low = 1;
+
+        bank = ((size_t)mem->mbc1_bank_high2 << 5) | low;
+    }
+
+    bank %= bank_count;
+
+    size_t offset = bank * 0x4000 + (addr & 0x3FFF);
+
+    if (offset >= mem->cart->size)
+        return 0xFF;
+
+    return mem->cart->data[offset];
+}
+
+static int mbc1_ram_index(
+    const Mem *mem,
+    uint16_t addr,
+    size_t *index)
+{
+    if (!mem->mbc1_ram_enabled || mem->mbc1_ram_size == 0)
+        return 0;
+
+    size_t bank_count = (mem->mbc1_ram_size + 0x1FFF) / 0x2000;
+
+    if (bank_count == 0)
+        return 0;
+
+    size_t bank = mem->mbc1_mode
+                      ? mem->mbc1_bank_high2
+                      : 0;
+
+    bank %= bank_count;
+
+    size_t offset = (size_t)(addr - 0xA000);
+
+    if (mem->mbc1_ram_size == 0x0800)
+        offset &= 0x07FF;
+
+    *index = bank * 0x2000 + offset;
+
+    return *index < mem->mbc1_ram_size;
+}
+
 void mem_init(Mem *mem, const Cart *cart)
 {
     memset(mem, 0, sizeof(*mem));
     mem->cart = cart;
+    mem->mbc1 = (uint8_t)cart_uses_mbc1(cart);
+
+    mem->mbc1_rom_low5 = 1;
+
+    mem->mbc1_ram_size = mem->mbc1
+                             ? mbc1_ram_size_from_header(cart)
+                             : 0;
     /* Header byte 0x0143: 0x80 = CGB-compatible, 0xC0 = CGB-only */
     mem->cgb = (cart->data[0x0143] & 0x80) != 0;
 
@@ -59,14 +164,31 @@ static void serial_putc(Mem *mem, uint8_t c)
 uint8_t mem_read(const Mem *mem, uint16_t addr)
 {
     if (addr < 0x8000)
-    {
-        /* ROM (no bank switching yet) */
-        return addr < mem->cart->size ? mem->cart->data[addr] : 0xFF;
-    }
+        if (addr < 0x8000)
+        {
+            if (mem->mbc1)
+                return mbc1_rom_read(mem, addr);
+
+            /* ROM Only and unsupported cartridge types. */
+            return addr < mem->cart->size
+                       ? mem->cart->data[addr]
+                       : 0xFF;
+        }
     if (addr < 0xA000)
         return mem->vram[vram_bank(mem)][addr - 0x8000];
     if (addr < 0xC000)
+    {
+        if (mem->mbc1)
+        {
+            size_t index;
+
+            return mbc1_ram_index(mem, addr, &index)
+                       ? mem->eram[index]
+                       : 0xFF;
+        }
+
         return mem->eram[addr - 0xA000];
+    }
     if (addr < 0xFE00)
     {
         /* WRAM and Echo RAM: 0xE000-0xFDFF mirrors 0xC000-0xDDFF.
@@ -123,7 +245,34 @@ uint8_t mem_read(const Mem *mem, uint16_t addr)
 void mem_write(Mem *mem, uint16_t addr, uint8_t val)
 {
     if (addr < 0x8000)
-        return; /* ROM: writes ignored (they will drive the MBC later) */
+    {
+        if (mem->mbc1)
+        {
+            if (addr < 0x2000)
+            {
+                /* RAM Enable */
+                mem->mbc1_ram_enabled =
+                    (uint8_t)((val & 0x0F) == 0x0A);
+            }
+            else if (addr < 0x4000)
+            {
+                /* ROM Bank Number: lower 5 bits */
+                mem->mbc1_rom_low5 = val & 0x1F;
+            }
+            else if (addr < 0x6000)
+            {
+                /* Upper ROM Bank bits / RAM Bank */
+                mem->mbc1_bank_high2 = val & 0x03;
+            }
+            else
+            {
+                /* Banking Mode Select */
+                mem->mbc1_mode = val & 0x01;
+            }
+        }
+
+        return;
+    }
     if (addr < 0xA000)
     {
         mem->vram[vram_bank(mem)][addr - 0x8000] = val;
@@ -131,7 +280,18 @@ void mem_write(Mem *mem, uint16_t addr, uint8_t val)
     }
     if (addr < 0xC000)
     {
-        mem->eram[addr - 0xA000] = val;
+        if (mem->mbc1)
+        {
+            size_t index;
+
+            if (mbc1_ram_index(mem, addr, &index))
+                mem->eram[index] = val;
+        }
+        else
+        {
+            mem->eram[addr - 0xA000] = val;
+        }
+
         return;
     }
     if (addr < 0xFE00)

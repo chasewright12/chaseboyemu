@@ -9,8 +9,15 @@ typedef struct
     const Cart *cart;
     int cgb;
 
+    uint8_t mbc1;
+    uint8_t mbc1_ram_enabled;
+    uint8_t mbc1_rom_low5;
+    uint8_t mbc1_bank_high2;
+    uint8_t mbc1_mode;
+    uint32_t mbc1_ram_size;
+
     uint8_t vram[2][0x2000]; /* 0x8000-0x9FFF; two banks on CGB, selected by VBK (0xFF4F) */
-    uint8_t eram[0x2000];
+    uint8_t eram[4 * 0x2000]; /* External cartridge RAM: up to 32 KiB. */
     uint8_t wram[8][0x1000]; /* 0xC000-0xCFFF = bank 0 (fixed)
                                 0xD000-0xDFFF = bank 1-7, selected by SVBK (0xFF70) */
     uint8_t oam[0xA0];
