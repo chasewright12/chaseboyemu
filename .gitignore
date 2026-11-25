@@ -22,3 +22,5 @@ roms/
 *.swp
 *~
 .DS_Store
+.text
+.txt

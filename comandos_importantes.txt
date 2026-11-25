@@ -1,0 +1,2 @@
+Para visualizar a pasta raiz gbemu sem expandir demais, recomendo usar:
+tree -L 2
