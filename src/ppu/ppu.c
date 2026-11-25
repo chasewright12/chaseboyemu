@@ -61,6 +61,7 @@ static void update_stat(Ppu *p)
 static void set_mode(Ppu *p, int mode)
 {
     p->mode = mode;
+    p->mem->ppu_mode = (uint8_t)mode;
     update_stat(p);
 }
 
@@ -284,6 +285,7 @@ static void lcd_turn_off(Ppu *p)
     p->lcd_on = 0;
     p->dot = 0;
     p->mode = 0;
+    p->mem->ppu_mode = 0;
     p->mem->io[REG_LY] = 0;
     for (int i = 0; i < LCD_W * LCD_H; i++)
     {
@@ -296,6 +298,7 @@ void ppu_init(Ppu *p, Mem *mem)
 {
     memset(p, 0, sizeof(*p));
     p->mem = mem;
+    mem->ppu_mode = 0;
     for (int i = 0; i < LCD_W * LCD_H; i++)
     {
         p->fb[i] = shades[0];

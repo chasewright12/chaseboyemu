@@ -28,11 +28,15 @@ typedef struct
     uint8_t ocps;
     uint8_t opri;
 
+    uint8_t ppu_mode;
+
     uint16_t div_counter;
     uint8_t timer_signal;
 
     uint8_t joy_select;
     uint8_t joy_state;
+
+
 
     int ly_stub;
 

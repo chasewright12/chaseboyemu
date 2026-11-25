@@ -2,6 +2,9 @@
 
 static size_t mbc5_rom_bank_count(const Cartridge *cartridge)
 {
+    if (cartridge->rom->size == 0)
+        return 0;
+
     return (cartridge->rom->size + 0x3FFF) / 0x4000;
 }
 
@@ -47,7 +50,9 @@ uint8_t mbc5_read(const Cartridge *cartridge, uint16_t addr)
             offset = bank * 0x4000 + (addr & 0x3FFF);
         }
 
-        if (offset >= cartridge->rom->size)
+        size_t bank_count = mbc5_rom_bank_count(cartridge);
+
+        if (bank >= bank_count || offset >= cartridge->rom->size)
             return 0xFF;
 
         return cartridge->rom->data[offset];

@@ -164,6 +164,28 @@ curl -L -o roms/dmg-acid2.gb https://github.com/mattcurrie/dmg-acid2/releases/do
 
 Open `acid.png` and compare it with the [reference image](https://github.com/mattcurrie/dmg-acid2/blob/master/img/reference-dmg.png). They should be identical.
 
+### Automated Testing Infrastructure
+
+A Python-based testing environment has been introduced using pytest and ctypes, allowing automated testing of the emulator's C components.
+
+Current test coverage inclues:
+- **PPU FIFO**: Initialization, capacity, overflow, underflow, ordering, wraparound, metadata preservation, and mixed operations.
+- **PPU Fetcher**: Initialization, state transitions, tile fetching, bitplane decoding, CGB attributtes, tile flipping, signed addressing, Window map selection, and FIFO stalling.
+- **PPU Pipeline**: Dedicated test suite.
+- **PPU Rendering**: Dedicated test suite.
+- **Palette RAM**: Register behavior and palette memory tests.
+
+The test infrastructure compiles the relevant C sources into a temporary shared library, allowing Python tests to interact directly with the emulator's native implementation.
+
+### Development Environment
+| Language | Build system | Graphics | Testing | Development environment
+|---|---|---|---|---|
+| C11. | GNU Make. | SDL2. | Python3, pytest, and ctypes. | Ubuntu on WSL2.
+
+**Development philosophy**: Building the emulator from scratch, prioritizing hardware accuracy, modular architecture, memory safety, and incremental testing while expanding DMG and CGB compatibility.
+
+---
+
 ### Cartridge controllers: MBC1, MBC3, and MBC5
 
 Use homebrew and public test ROMs to verify bank switching and cartridge behavior. The ROM header's cartridge type byte identifies the controller:
@@ -181,6 +203,15 @@ For example, run a ROM with:
 ```
 
 Check the printed cartridge type and test ROM behavior. MBC3 RTC ticking/latching details, battery-backed save persistence, and some controller-specific hardware behavior may still need further implementation and testing.
+
+## Game Boy COlor (GBC) Improvements
+- **Banked VRAM**: Support for two 8 KB VRAM banks, select through the VBK register (0xFF4F).
+- **BANKED WRAM**: Support for eight 4 KB WRAM banks, controlled through SVBK (0xFF70).
+- **CGB Palette RAM**: Implementation and correction of Background and Object Palette RAM.
+- **Color palette rendering**: RGB555-to-RGBA color conversion and improved CGB palette handlibg.
+- **Background palettes**: Support for eight sprite palettes, each containing four colors.
+- **KEY1 speed switching**: CGB double-speed mode support.
+- **OPRI register**: CGB object priority control.
 
 ## 🗂️ Project structure
 
@@ -261,6 +292,19 @@ The CPU uses the registers `A`, `F`, `B`, `C`, `D`, `E`, `H`, `L`, plus `SP` and
 Each line takes 456 dots and goes through three modes (OAM scan, drawing, and HBlank), and a frame is 154 lines (144 visible plus 10 of VBlank), or 70224 dots. At the end of the drawing mode each line is rendered in three layers: background, window, and sprites (up to 10 per line, with the DMG priority rules). The PPU also raises the VBlank interrupt and the STAT interrupts (HBlank, VBlank, OAM, and `LYC=LY`).
 
 Known simplifications: mode 3 always lasts 172 dots, and the CPU can access VRAM and OAM at any time.
+
+The PPU development has been expanded with dedicated FIFO and Fetcher components, establishing the foundation for a more accurate pixel-fetchin pipeline.
+
+- **PPU FIFO**: Implementation of a 16-pixel circular FIFO buffer.
+- **Pixel metadata**: Each FIFO entry stores color ID, palette, priority, VRAM bank, object identification, background priority, and OAM index.
+- **FIFO operations**: Initialization, clearing, push, pop, peak, overflow protection, and circular buffer management.
+- **Pixel Fetcher**: Dedicated state machine with tile fetching, low-byte fetching, high-byte fetching, and pixel pushing stages.
+- **Two-dot fetch stages**: Each fetching stage advances according to PPU dot timing.
+- **Tile Map Fetching**: Background and Window tile map selection through LCDC registers.
+- **Tile Data Addressing**: Support for both signed and unsigned tile addressing modes.
+- **CGB Tile Attributes**: Palette selection, VRAM bank selection, horizontal and vertical flapping, and background priority.
+- **Pixel Decoding**: Conversion of two bitplanes into eight individual color IDs.
+- **FIFO Push Stalling**: Fetcher waits when the background FIFO contains more than eight pixels.
 
 ## 🗺️ Roadmap
 

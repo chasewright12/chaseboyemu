@@ -17,6 +17,22 @@ static int wram_bank(const Mem *mem)
     return bank ? bank : 1;
 }
 
+static int lcd_enabled(const Mem *mem)
+{
+    return (mem->io[0x40] & 0x80) != 0;
+}
+
+static int vram_access_blocked(const Mem *mem)
+{
+    return lcd_enabled(mem) && mem->ppu_mode == 3;
+}
+
+static int oam_access_blocked(const Mem *mem)
+{
+    return lcd_enabled(mem) &&
+    (mem->ppu_mode == 2 || mem->ppu_mode == 3);
+}
+
 static void serial_putc(Mem *mem, uint8_t c)
 {
     fputc(c, stderr);
@@ -56,15 +72,26 @@ void mem_init(Mem *mem, const Cart *cart)
     mem->io[0x47] = 0xFC;
     mem->io[0x48] = 0xFF;
     mem->io[0x49] = 0xFF;
+
+    mem->ppu_mode = 0;
 }
 
-uint8_t mem_read(const Mem *mem, uint16_t addr)
+static uint8_t mem_read_internal(
+    const Mem *mem,
+    uint16_t addr,
+    int cpu_access
+)
 {
     if (addr < 0x8000)
         return cartridge_read(&mem->cartridge, addr);
 
     if (addr < 0xA000)
+    {
+        if (cpu_access && vram_access_blocked(mem))
+            return 0xFF;
+
         return mem->vram[vram_bank(mem)][addr - 0x8000];
+    }
 
     if (addr < 0xC000)
         return cartridge_read(&mem->cartridge, addr);
@@ -74,16 +101,14 @@ uint8_t mem_read(const Mem *mem, uint16_t addr)
         uint16_t offset = addr & 0x1FFF;
 
         return offset < 0x1000
-                   ? mem->wram[0][offset]
-                   : mem->wram[wram_bank(mem)][offset - 0x1000];
+                     ? mem->wram[0][offset]
+                     : mem->wram[wram_bank(mem)][offset - 0x1000];
     }
 
-    if (addr < 0xFEA0)
-        return mem->oam[addr - 0xFE00];
-
     if (addr < 0xFF00)
+    {
         return 0xFF;
-
+    }
     if (addr < 0xFF80)
     {
         switch (addr)
@@ -108,7 +133,8 @@ uint8_t mem_read(const Mem *mem, uint16_t addr)
 
         case 0xFF4D:
             return mem->cgb
-                       ? (uint8_t)(0x7E | (mem->double_speed << 7) | (mem->key1 & 1))
+                       ? (uint8_t)(0x7E | (mem->double_speed << 7) |
+                                   (mem->key1 & 1))
                        : 0xFF;
 
         case 0xFF4F:
@@ -121,19 +147,27 @@ uint8_t mem_read(const Mem *mem, uint16_t addr)
             return mem->cgb ? (uint8_t)(0x40 | mem->bcps) : 0xFF;
 
         case 0xFF69:
-            return mem->cgb ? mem->bg_pal[mem->bcps & 0x3F] : 0xFF;
+            if (!mem->cgb || mem->ppu_mode == 3)
+                return 0xFF;
+
+            return mem->bg_pal[mem->bcps & 0x3F];
 
         case 0xFF6A:
             return mem->cgb ? (uint8_t)(0x40 | mem->ocps) : 0xFF;
 
         case 0xFF6B:
-            return mem->cgb ? mem->obj_pal[mem->ocps & 0x3F] : 0xFF;
+            return mem->cgb
+                       ? ((mem->ppu_mode == 3)
+                              ? 0xFF
+                              : mem->obj_pal[mem->ocps & 0x3F])
+                       : 0xFF;
 
         case 0xFF6C:
             return mem->cgb ? (uint8_t)(0xFE | (mem->opri & 1)) : 0xFF;
 
         default:
             return mem->io[addr - 0xFF00];
+        
         }
     }
 
@@ -141,6 +175,10 @@ uint8_t mem_read(const Mem *mem, uint16_t addr)
         return mem->hram[addr - 0xFF80];
 
     return mem->ie;
+}
+uint8_t mem_read(const Mem *mem, uint16_t addr)
+{
+    return mem_read_internal(mem, addr, 1);
 }
 
 void mem_write(Mem *mem, uint16_t addr, uint8_t val)
@@ -153,6 +191,9 @@ void mem_write(Mem *mem, uint16_t addr, uint8_t val)
 
     if (addr < 0xA000)
     {
+        if (vram_access_blocked(mem))
+            return;
+
         mem->vram[vram_bank(mem)][addr - 0x8000] = val;
         return;
     }
@@ -177,6 +218,9 @@ void mem_write(Mem *mem, uint16_t addr, uint8_t val)
 
     if (addr < 0xFEA0)
     {
+        if (oam_access_blocked(mem))
+            return;
+
         mem->oam[addr - 0xFE00] = val;
         return;
     }
@@ -224,7 +268,12 @@ void mem_write(Mem *mem, uint16_t addr, uint8_t val)
             uint16_t source = (uint16_t)(val << 8);
 
             for (int i = 0; i < 0xA0; i++)
-                mem->oam[i] = mem_read(mem, (uint16_t)(source + i));
+            {
+                mem->oam[i] = mem_read_internal(
+                    mem,
+                    (uint16_t)(source + i),
+                    0);
+            }
 
             mem->io[0x46] = val;
             return;
@@ -256,7 +305,7 @@ void mem_write(Mem *mem, uint16_t addr, uint8_t val)
             return;
 
         case 0xFF69:
-            if (mem->cgb)
+            if (mem->cgb && mem->ppu_mode != 3)
             {
                 mem->bg_pal[mem->bcps & 0x3F] = val;
 
@@ -267,7 +316,7 @@ void mem_write(Mem *mem, uint16_t addr, uint8_t val)
             return;
 
         case 0xFF6B:
-            if (mem->cgb)
+            if (mem->cgb && mem->ppu_mode != 3)
             {
                 mem->obj_pal[mem->ocps & 0x3F] = val;
 

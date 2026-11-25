@@ -3,8 +3,12 @@ CC = gcc
 CFLAGS = -Wall -Wextra -std=c11 -g -O2
 LDLIBS =
 
-SRC = $(wildcard src/*.c) $(wildcard src/cartridge/*.c)
-HEADERS = $(wildcard src/*.h) $(wildcard src/cartridge/*.h)
+SRC = $(wildcard src/*.c) \
+      $(wildcard src/cartridge/*.c) \
+      $(wildcard src/ppu/*.c)
+HEADERS = $(wildcard src/*.h) \
+          $(wildcard src/cartridge/*.h) \
+          $(wildcard src/ppu/*.h)
 
 OUT = gbemu
 
