@@ -204,7 +204,7 @@ For example, run a ROM with:
 
 Check the printed cartridge type and test ROM behavior. MBC3 RTC ticking/latching details, battery-backed save persistence, and some controller-specific hardware behavior may still need further implementation and testing.
 
-## Game Boy COlor (GBC) Improvements
+## Game Boy Color (GBC) Improvements
 - **Banked VRAM**: Support for two 8 KB VRAM banks, select through the VBK register (0xFF4F).
 - **BANKED WRAM**: Support for eight 4 KB WRAM banks, controlled through SVBK (0xFF70).
 - **CGB Palette RAM**: Implementation and correction of Background and Object Palette RAM.
@@ -216,28 +216,48 @@ Check the printed cartridge type and test ROM behavior. MBC3 RTC ticking/latchin
 ## 🗂️ Project structure
 
 ```text
-gbemu/
 ├── Makefile
 ├── README.md
-├── docs/
-│   └── images/
-│       ├── chaseboyemulator_v2.0.png
-│       └── reference-dmg.png
-└── src/
-    ├── main.c              # Entry point, command-line options, and main loop
-    ├── cart.c / cart.h    # ROM loading and header parsing
-    ├── mem.c / mem.h      # Memory bus, address map, DMA, and I/O
-    ├── cpu.c / cpu.h      # Registers, flags, instructions, and interrupts
-    ├── timer.c / timer.h  # DIV, TIMA, TMA, and TAC
-    ├── ppu.c / ppu.h      # Video: timing, background, window, and sprites
-    ├── input.c / input.h  # Keyboard and SDL2 joypad/controller input
-    ├── joypad.c / joypad.h# Joypad register and button state
-    ├── png.c / png.h      # PNG writer (no external library)
-    └── cartridge/
-        ├── cartridge.c / cartridge.h # Cartridge interface and controller selection
-        ├── mbc1.c / mbc1.h           # MBC1 bank switching
-        ├── mbc3.c / mbc3.h           # MBC3 bank switching and RTC registers
-        └── mbc5.c / mbc5.h           # MBC5 bank switching
+├── docs
+│   └── images
+├── gbemu
+├── roms
+│   ├── dmg-acid2.gb
+│   ├── gb-test-roms
+│   ├── joytest.gb
+│   ├── joytest.gb:Zone.Identifier
+│   ├── pokemon_gold_version.gbc
+│   └── tetris.gb
+├── src
+│   ├── cart.c
+│   ├── cart.h
+│   ├── cartridge
+│   ├── cpu.c
+│   ├── cpu.h
+│   ├── input.c
+│   ├── input.h
+│   ├── joypad.c
+│   ├── joypad.h
+│   ├── main.c
+│   ├── mem.c
+│   ├── mem.h
+│   ├── png.c
+│   ├── png.h
+│   ├── ppu
+│   ├── timer.c
+│   └── timer.h
+└── tests
+    ├── __pycache__
+    ├── conftest.py
+    ├── make_joytest.py
+    ├── ppu_test_utils.py
+    ├── test_dualshock.py
+    ├── test_input.py
+    ├── test_palette_ram.py
+    ├── test_ppu_fetcher.py
+    ├── test_ppu_fifo.py
+    ├── test_ppu_pipeline.py
+    └── test_ppu_rendering.py
 ```
 
 ## 🧠 How it works
