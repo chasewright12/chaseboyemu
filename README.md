@@ -339,8 +339,8 @@ The PPU development has been expanded with dedicated FIFO and Fetcher components
 - [x] Game Boy Color groundwork: VRAM/WRAM banks and speed switch
 - [x] Joypad input via keyboard and SDL2 game controllers (PS4 DualShock 4 tested over USB)
 - [x] MBC1, MBC3, and MBC5 cartridge support (initial bank switching implementation)
-- [ ] Run commercial games reliably, including Tetris
-- [ ] Accurate cycle counting (`instr_timing`)
+- [x] Run commercial games reliably, including Tetris
+- [x] Accurate cycle counting (`instr_timing`)
 - [ ] Game Boy Color video: palettes, tile attributes, and HDMA (`cgb-acid2`)
 - [ ] Audio (APU)
 - [ ] Battery-backed RAM persistence and save files

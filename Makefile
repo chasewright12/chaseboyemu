@@ -13,7 +13,7 @@ HEADERS = $(wildcard src/*.h) \
 OUT = gbemu
 
 ifdef SDL
-CFLAGS += -DUSE_SDL $(shell sdl2-config --cflags)
+CFLAGS += -DUSE_SDL -I/usr/include/SDL2 -D_REENTRANT -Isrc/ppu
 LDLIBS += $(shell sdl2-config --libs)
 endif
 

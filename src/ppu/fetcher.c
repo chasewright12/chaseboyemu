@@ -99,7 +99,7 @@ static void fetch_tile(
         mem->vram[0][fetcher->tile_map_addr];
 
     fetcher->tile_attr = mem->cgb
-                             ? mem->vram[1][fetcher->tile_map_addr]
+                             ? (mem->vram[1][fetcher->tile_map_addr] & 0x07)
                              : 0;
 
     /*

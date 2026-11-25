@@ -1,2 +1,11 @@
 Para visualizar a pasta raiz gbemu sem expandir demais, recomendo usar:
 tree -L 2
+
+Para rodar os arquivos de teste, recomendo usar:
+python -m pytest tests/test_ppu_fetcher.py -v para um arquivo, ou
+python -m pytest tests/ -v para TODOS os arquivos da pasta (ISSO REQUER PROCESSAMENTO DA SUA MÁQUINA OU CLUSTER NO ATO DO DEPLOYMENT).
+
+Para adicionar o seu controle ao WSL, use esse código no PowerShell do Windows como usuário root.
+usbipd attach --wsl --busid 1-4
+
+OBS.: É necessário ter usbipd, para localizar o dispositivo joystick do seu computador e, posteriormente conectá-lo ao seu WSL terminal para ser reconhecido pela máquina virtual.
