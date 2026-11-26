@@ -1,10 +1,11 @@
 <div align="center">
 
-# Chase Boy Emulator | Game Boy Color Emulator
+# Chase Boy Emulator | Game Boy Color Emulator (GBC)
 
 <img src="./docs/images/chaseboyemulator_v2.0.png" width="250" alt="Chase Boy Emulator logo">
 
-**A Game Boy emulator written from scratch in C**, DMG first, with Game Boy Color support in progress.  
+**A Game Boy emulator written from scratch in C**, DMG first, with Game Boy Color support in progress.
+
 Written by **ChaseWright12**.
 
 ![Language](https://img.shields.io/badge/C-C11-00599C?style=for-the-badge&logo=c&logoColor=white)
@@ -45,7 +46,7 @@ The emulator successfully passes the DMG-ACID2 test. The "01-special Passed" mes
 
 <div align="center">
 
-<img src="./docs/images/teste.png" width="320" alt="dmg-acid2 rendered by the emulator">
+<img src="./docs/images/teste.png" width="320" alt="teste image do dmg-acid2">
 
 </div>
 
@@ -54,12 +55,12 @@ The emulator rendering a gameplay for "Pokemon Gold Version (2000)" as DMG (Game
 
 <div align="center">
 
-<img src="./docs/images/pokemon_screenshot_chaseboyemulator.png" width="320" alt="dmg-acid2 rendered by the emulator">
+<img src="./docs/images/pokemon_screenshot_chaseboyemulator.png" width="320" alt="Imagem de gameplay do Pokemon Gold Version (2000)">
 
-The emulator running **Rayman (Game Boy Color)**, demonstrating the current progress of CGB graphics rendering, color palettes, tile attributes, and VRAM DMA support.
+The emulator running **Donald Duck - Goin' Quackers (Game Boy Color)**, demonstrating the current progress of CGB graphics rendering, color palettes, tile attributes, and VRAM DMA support.
 
 <div align="center">
-  <img src="./docs/images/rayman_screenshot_chaseboyemulator.png" width="320" alt="Rayman running on Chase Boy Emulator">
+  <img src="./docs/images/quackers.png" width="320" alt="Quackers (GBC)">
 </div>
 
 </div>
