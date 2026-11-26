@@ -1,4 +1,5 @@
 #include "ppu.h"
+#include "../dma/hdma.h"
 
 #include <string.h>
 
@@ -64,10 +65,23 @@ static void update_stat(Ppu *p)
 
 static void set_mode(Ppu *p, int mode)
 {
+    int previous_mode = p->mode;
+    Mem *m = p->mem;
+
     p->mode = mode;
-    p->mem->ppu_mode = (uint8_t)mode;
+    m->ppu_mode = (uint8_t)mode;
 
     update_stat(p);
+
+    /* Transfer one HDMA block on entry into visible HBlank. */
+    if (previous_mode == 3 && mode == 0 &&
+        p->lcd_on &&
+        m->io[REG_LY] < LCD_H &&
+        m->cgb &&
+        m->hdma != NULL)
+    {
+        hdma_hblank(m->hdma);
+    }
 }
 
 static uint32_t cgb_color(

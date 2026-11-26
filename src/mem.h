@@ -1,9 +1,12 @@
+
 #ifndef MEM_H
 #define MEM_H
 
 #include <stdint.h>
 #include "cart.h"
 #include "cartridge/cartridge.h"
+
+typedef struct Hdma Hdma;
 
 typedef struct
 {
@@ -36,13 +39,14 @@ typedef struct
     uint8_t joy_select;
     uint8_t joy_state;
 
-
-
     int ly_stub;
 
     char serial_log[4096];
     int serial_len;
     int test_done;
+
+    Hdma *hdma;
+
 } Mem;
 
 void mem_init(Mem *mem, const Cart *cart);

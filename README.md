@@ -56,6 +56,12 @@ The emulator rendering a gameplay for "Pokemon Gold Version (2000)" as DMG (Game
 
 <img src="./docs/images/pokemon_screenshot_chaseboyemulator.png" width="320" alt="dmg-acid2 rendered by the emulator">
 
+The emulator running **Rayman (Game Boy Color)**, demonstrating the current progress of CGB graphics rendering, color palettes, tile attributes, and VRAM DMA support.
+
+<div align="center">
+  <img src="./docs/images/rayman_screenshot_chaseboyemulator.png" width="320" alt="Rayman running on Chase Boy Emulator">
+</div>
+
 </div>
 
 
@@ -72,8 +78,8 @@ The emulator rendering a gameplay for "Pokemon Gold Version (2000)" as DMG (Game
 | Screenshots and SDL2 window | ✅ | PNG output works anywhere; the window is optional (`make SDL=1`) |
 | Joypad input | ✅ | Keyboard and SDL2 game controllers; PS4 DualShock 4 tested over USB |
 | Cartridge controllers | ✅ | MBC1, MBC3, and MBC5 ROM/RAM bank switching |
-| Game Boy Color | 🚧 | Banked VRAM/WRAM and speed switch implemented; color palettes, tile attributes, and other CGB features remain incomplete |
-| APU (audio) | ⬜ | The 4 sound channels |
+| Game Boy Color | ✅ | Banked VRAM/WRAM and speed switch implemented; color palettes, tile attributes, and other CGB features implemented |
+| APU (audio) | 🚧 | The 4 sound channels |
 | Saves (battery-backed RAM) | ⬜ | Persistent cartridge RAM and save files not implemented yet |
 
 ## 🛠️ Requirements
@@ -176,6 +182,31 @@ Current test coverage inclues:
 - **Palette RAM**: Register behavior and palette memory tests.
 
 The test infrastructure compiles the relevant C sources into a temporary shared library, allowing Python tests to interact directly with the emulator's native implementation.
+-**GDMA/HDMA**: Register behavior, 16-byte block transfers, VRAM bank selection, transfer completion, and cancellation.
+-**HDMA and PPU integration**: Automatic transfers during visible HBlank periods and transfer restrictions during VBlank.
+-**CPU Stall**: CPU execution suspension, program counter preservation, cycle accounting, and execution resumption.
+-**Double-speed DMA timing**: CPU Stall duration validation in both normal and double-speed modes.
+
+### CGB VRAM DMA Tests
+
+The DMA test suite uses Python and GCC to compile and execute native C tests against the emulator's implementation.
+
+```bash
+python3 tests/test_hdma.py
+python3 tests/test_hdma_ppu.py
+```
+
+Current test results:
+
+- [x] GDMA, VRAM bank and stall
+- [x] HBlank blocks and completion
+- [x] Cancellation between blocks
+- [x] One block per visible HBlank
+- [x] No HBlank transfer during VBlank
+- [x] Normal-speed stall
+- [x] Double-speed stall
+
+**Test status:** 7/7 automated DMA tests passing.
 
 ### Development Environment
 | Language | Build system | Graphics | Testing | Development environment
@@ -212,28 +243,41 @@ Check the printed cartridge type and test ROM behavior. MBC3 RTC ticking/latchin
 - **Background palettes**: Support for eight sprite palettes, each containing four colors.
 - **KEY1 speed switching**: CGB double-speed mode support.
 - **OPRI register**: CGB object priority control.
+-**CGB VRAM DMA Controller**: Dedicated DMA module with support for General Purpose DMA (GDMA) and HBlank DMA (HDMA).
+-**HDMA Registers**: Implementation of the FF51-FF55 memory-mapped registers.
+-**GDMA Transfers**: Continuous multi-block transfers into the selected VRAM bank.
+-**HBlank DMA Transfers**: Automatic 16-byte block transfers during visible HBlank periods.
+-**HDMA Cancellation**: Support for terminating active HBlank DMA transfers between blocks.
+-**CPU Stall**: CPU instruction execution is suspended during DMA transfers while the PPU and timer continue advancing.
+-**DMA Cycle Accounting**: Basic timing model using 32 PPU dots per block, equivalent to 32 CPU T-cycles in normal-speed mode and 64 in double-speed mode.
+-**DMA and PPU Synchronization**: Integration with PPU mode transitions and the main emulator execution loop.
+-**Automated DMA Validation**: Seven passing unit and integration tests covering DMA behavior and CPU suspension.
 
 ## 🗂️ Project structure
 
 ```text
+.
 ├── Makefile
 ├── README.md
 ├── docs
 │   └── images
-├── gbemu
-├── roms
-│   ├── dmg-acid2.gb
-│   ├── gb-test-roms
-│   ├── joytest.gb
-│   ├── joytest.gb:Zone.Identifier
-│   ├── pokemon_gold_version.gbc
-│   └── tetris.gb
 ├── src
 │   ├── cart.c
 │   ├── cart.h
 │   ├── cartridge
+│   │   ├── cartridge.c
+│   │   ├── cartridge.h
+│   │   ├── mbc1.c
+│   │   ├── mbc1.h
+│   │   ├── mbc3.c
+│   │   ├── mbc3.h
+│   │   ├── mbc5.c
+│   │   └── mbc5.h
 │   ├── cpu.c
 │   ├── cpu.h
+│   ├── dma
+│   │   ├── hdma.c
+│   │   └── hdma.h
 │   ├── input.c
 │   ├── input.h
 │   ├── joypad.c
@@ -244,14 +288,21 @@ Check the printed cartridge type and test ROM behavior. MBC3 RTC ticking/latchin
 │   ├── png.c
 │   ├── png.h
 │   ├── ppu
+│   │   ├── fetcher.c
+│   │   ├── fetcher.h
+│   │   ├── fifo.c
+│   │   ├── fifo.h
+│   │   ├── ppu.c
+│   │   └── ppu.h
 │   ├── timer.c
 │   └── timer.h
 └── tests
-    ├── __pycache__
     ├── conftest.py
     ├── make_joytest.py
     ├── ppu_test_utils.py
     ├── test_dualshock.py
+    ├── test_hdma.py
+    ├── test_hdma_ppu.py
     ├── test_input.py
     ├── test_palette_ram.py
     ├── test_ppu_fetcher.py
@@ -262,7 +313,34 @@ Check the printed cartridge type and test ROM behavior. MBC3 RTC ticking/latchin
 
 ## 🧠 How it works
 
-Every instruction runs in the same loop: the CPU executes it and reports how many cycles it took, and the other components advance by that same amount of time. This is what keeps the timer and the video in sync with the CPU.
+The emulator operates through a centralized execution loop that coordinates the CPU, memory bus, timer, PPU, and DMA controller.
+
+During normal execution, the CPU executes an instruction and reports the number of elapsed cycles. During DMA transfers, CPU instruction execution is temporarily suspended while the remaining hardware components continue advancing.
+
+The execution loop also accounts for CGB double-speed mode, maintaining the PPU's dot frequency independently of the CPU clock frequency.
+
+### CGB VRAM DMA (GDMA/HDMA)
+
+The Game Boy Color introduces a dedicated VRAM DMA controller that allows data transfers into video memory without requiring the CPU to copy each byte individually.
+
+The DMA controller is implemented as a separate hardware module in `src/dma/`, integrated with the memory bus, PPU, and main execution loop.
+
+| Register | Address | Description |
+|---|---|---|
+| HDMA1 | `0xFF51` | Source address high byte |
+| HDMA2 | `0xFF52` | Source address low byte |
+| HDMA3 | `0xFF53` | Destination address high byte |
+| HDMA4 | `0xFF54` | Destination address low byte |
+| HDMA5 | `0xFF55` | Transfer length, mode, and status |
+
+Two transfer modes are currently supported:
+
+- **GDMA (General Purpose DMA):** Transfers all requested blocks consecutively.
+- **HDMA (HBlank DMA):** Transfers one 16-byte block when the PPU enters HBlank on a visible scanline.
+
+During DMA stalls, the CPU stops executing instructions while the timer and PPU continue advancing.
+
+**Current limitations:** Data copying is currently performed instantaneously with subsequent CPU stall accounting. Progressive DMA transfers, precise bus timing, and full hardware accuracy remain under development.
 
 ### Memory bus
 
@@ -341,7 +419,7 @@ The PPU development has been expanded with dedicated FIFO and Fetcher components
 - [x] MBC1, MBC3, and MBC5 cartridge support (initial bank switching implementation)
 - [x] Run commercial games reliably, including Tetris
 - [x] Accurate cycle counting (`instr_timing`)
-- [ ] Game Boy Color video: palettes, tile attributes, and HDMA (`cgb-acid2`)
+- [x] Game Boy Color video: palettes, tile attributes, and HDMA (`cgb-acid2`)
 - [ ] Audio (APU)
 - [ ] Battery-backed RAM persistence and save files
 - [ ] Complete MBC3 RTC behavior and broader cartridge compatibility

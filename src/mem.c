@@ -1,4 +1,5 @@
 #include "mem.h"
+#include "./dma/hdma.h"
 #include "timer.h"
 #include "joypad.h"
 #include "cartridge/cartridge.h"
@@ -30,7 +31,7 @@ static int vram_access_blocked(const Mem *mem)
 static int oam_access_blocked(const Mem *mem)
 {
     return lcd_enabled(mem) &&
-    (mem->ppu_mode == 2 || mem->ppu_mode == 3);
+           (mem->ppu_mode == 2 || mem->ppu_mode == 3);
 }
 
 static void serial_putc(Mem *mem, uint8_t c)
@@ -79,8 +80,7 @@ void mem_init(Mem *mem, const Cart *cart)
 static uint8_t mem_read_internal(
     const Mem *mem,
     uint16_t addr,
-    int cpu_access
-)
+    int cpu_access)
 {
     if (addr < 0x8000)
         return cartridge_read(&mem->cartridge, addr);
@@ -101,8 +101,8 @@ static uint8_t mem_read_internal(
         uint16_t offset = addr & 0x1FFF;
 
         return offset < 0x1000
-                     ? mem->wram[0][offset]
-                     : mem->wram[wram_bank(mem)][offset - 0x1000];
+                   ? mem->wram[0][offset]
+                   : mem->wram[wram_bank(mem)][offset - 0x1000];
     }
 
     if (addr < 0xFF00)
@@ -164,10 +164,19 @@ static uint8_t mem_read_internal(
 
         case 0xFF6C:
             return mem->cgb ? (uint8_t)(0xFE | (mem->opri & 1)) : 0xFF;
+        case 0xFF51:
+        case 0xFF52:
+        case 0xFF53:
+        case 0xFF54:
+            return mem->cgb ? mem->io[addr - 0xFF00] : 0xFF;
+
+        case 0xFF55:
+            return mem->cgb && mem->hdma
+                       ? hdma_read_register(mem->hdma, addr)
+                       : 0xFF;
 
         default:
             return mem->io[addr - 0xFF00];
-        
         }
     }
 
@@ -329,6 +338,15 @@ void mem_write(Mem *mem, uint16_t addr, uint8_t val)
         case 0xFF6C:
             if (mem->cgb)
                 mem->opri = val & 1;
+            return;
+
+        case 0xFF51:
+        case 0xFF52:
+        case 0xFF53:
+        case 0xFF54:
+        case 0xFF55:
+            if (mem->cgb && mem->hdma)
+                hdma_write_register(mem->hdma, addr, val);
             return;
 
         default:
