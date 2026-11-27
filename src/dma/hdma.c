@@ -1,232 +1,368 @@
-#include "hdma.h"
 
+#include "hdma.h"
 #include <string.h>
 
-#define HDMA1 0xFF51
-#define HDMA2 0xFF52
-#define HDMA3 0xFF53
-#define HDMA4 0xFF54
-#define HDMA5 0xFF55
-
-#define VRAM_START 0x8000
-#define VRAM_END 0xA000
-
-#define HDMA_BLOCK_SIZE 16
-
-static uint16_t get_source(Hdma *hdma)
+/*
+ * Update the internal source and destination registers
+ * after completing a DMA block.
+ */
+static void hdma_update_registers(Hdma *hdma)
 {
-    uint8_t high = hdma->mem->io[HDMA1 - 0xFF00];
-    uint8_t low = hdma->mem->io[HDMA2 - 0xFF00] & 0xF0;
+    Mem *mem = hdma->mem;
 
-    return ((uint16_t)high << 8) | low;
-}
-
-static uint16_t get_destination(Hdma *hdma)
-{
-    uint8_t high = hdma->mem->io[HDMA3 - 0xFF00] & 0x1F;
-    uint8_t low = hdma->mem->io[HDMA4 - 0xFF00] & 0xF0;
-
-    return VRAM_START | ((uint16_t)high << 8) | low;
-}
-
-static void update_registers(Hdma *hdma)
-{
-    hdma->mem->io[HDMA1 - 0xFF00] =
+    mem->io[0x51] =
         (uint8_t)(hdma->source >> 8);
-    hdma->mem->io[HDMA2 - 0xFF00] =
+
+    mem->io[0x52] =
         (uint8_t)(hdma->source & 0xF0);
-    hdma->mem->io[HDMA3 - 0xFF00] =
+
+    mem->io[0x53] =
         (uint8_t)((hdma->destination >> 8) & 0x1F);
 
-    hdma->mem->io[HDMA4 - 0xFF00] =
+    mem->io[0x54] =
         (uint8_t)(hdma->destination & 0xF0);
 }
 
+/*
+ * Finish the current DMA operation.
+ */
+static void hdma_finish(Hdma *hdma)
+{
+    hdma->active = 0;
+    hdma->block_active = 0;
+    hdma->cancelled = 0;
+
+    hdma->blocks_remaining = 0;
+    hdma->bytes_transferred = 0;
+    hdma->dot_counter = 0;
+    hdma->stall_dots = 0;
+
+    hdma->mem->io[0x55] = 0xFF;
+}
+
+/*
+ * Initialize the DMA controller.
+ */
 void hdma_init(Hdma *hdma, Mem *mem)
 {
     memset(hdma, 0, sizeof(*hdma));
 
     hdma->mem = mem;
-    hdma->stall_dots = 0;
+    hdma->destination = 0x8000;
+
+    mem->io[0x55] = 0xFF;
 }
 
-uint8_t hdma_read_register(const Hdma *hdma, uint16_t addr) {
-    if (!hdma || !hdma->mem || !hdma->mem->cgb)
-        return 0xFF;
-
-    if (addr != HDMA5)
-        return 0xFF;
-
-    if (hdma->active) {
-        return (uint8_t)((hdma->blocks_remaining - 1) & 0x7F);
-    }
-    if (hdma->cancelled) {
-        return (uint8_t)(0x80 | ((hdma->blocks_remaining - 1) & 0x7F));
-    }
-
-    return 0xFF;
-}
-
-void hdma_write_register(Hdma *hdma, uint16_t addr, uint8_t value)
+/*
+ * Read HDMA registers.
+ */
+uint8_t hdma_read_register(
+    const Hdma *hdma,
+    uint16_t addr)
 {
-    if (!hdma || !hdma->mem || !hdma->mem->cgb)
+    if (!hdma || !hdma->mem)
+        return 0xFF;
+
+    switch (addr)
+    {
+    case 0xFF51:
+    case 0xFF52:
+    case 0xFF53:
+    case 0xFF54:
+        return hdma->mem->io[addr - 0xFF00];
+
+    case 0xFF55:
+
+        if (hdma->active &&
+            hdma->blocks_remaining > 0)
+        {
+            return (uint8_t)((hdma->blocks_remaining - 1) & 0x7F);
+        }
+
+        if (hdma->cancelled &&
+            hdma->blocks_remaining > 0)
+        {
+            return (uint8_t)(0x80 |
+                             ((hdma->blocks_remaining - 1) & 0x7F));
+        }
+
+        return 0xFF;
+
+    default:
+        return 0xFF;
+    }
+}
+
+/*
+ * Write HDMA registers.
+ */
+void hdma_write_register(
+    Hdma *hdma,
+    uint16_t addr,
+    uint8_t value)
+{
+    if (!hdma || !hdma->mem)
         return;
 
-    switch (addr) {
-        case HDMA1:
-            if (!hdma->active)
-                hdma->mem->io[addr - 0xFF00] = value;
-            break;
-        
-        case HDMA2:
-            if (!hdma->active)
-                hdma->mem->io[addr - 0xFF00] = value & 0xF0;
-            break;
+    if (!hdma->mem->cgb)
+        return;
 
-        case HDMA3:
-            if (!hdma->active)
-                hdma->mem->io[addr - 0xFF00] = value & 0x1F;
-            break;
+    /*
+     * Ignore source and destination register
+     * modifications during an active transfer.
+     */
+    if (hdma->active && addr != 0xFF55)
+        return;
 
-        case HDMA4:
-            if (!hdma->active)
-                hdma->mem->io[addr - 0xFF00] = value & 0xF0;
-            break;
+    switch (addr)
+    {
+    case 0xFF51:
+        hdma->mem->io[0x51] = value;
+        break;
 
-        case HDMA5:
-            hdma_start(hdma, value);
-            break;
+    case 0xFF52:
+        hdma->mem->io[0x52] = value & 0xF0;
+        break;
 
-        default:
-            break;
+    case 0xFF53:
+        hdma->mem->io[0x53] = value & 0x1F;
+        break;
+
+    case 0xFF54:
+        hdma->mem->io[0x54] = value & 0xF0;
+        break;
+
+    case 0xFF55:
+        hdma_start(hdma, value);
+        break;
+
+    default:
+        break;
     }
 }
 
+/*
+ * Schedule a new 16-byte DMA block.
+ *
+ * Unlike the previous implementation,
+ * this function does not copy bytes immediately.
+ */
+void hdma_transfer_block(Hdma *hdma)
+{
+    if (!hdma || !hdma->active)
+        return;
+
+    if (hdma->block_active)
+        return;
+
+    if (hdma->blocks_remaining == 0)
+        return;
+
+    hdma->block_active = 1;
+    hdma->bytes_transferred = 0;
+    hdma->dot_counter = 0;
+
+    hdma->vram_bank = hdma->mem->vbk & 1;
+
+    hdma->stall_dots = HDMA_BLOCK_DOTS;
+}
+
+/*
+ * Start a GDMA or HBlank DMA operation.
+ */
 void hdma_start(Hdma *hdma, uint8_t value)
 {
-    if (!hdma || !hdma->mem || !hdma->mem->cgb)
+    if (!hdma || !hdma->mem)
         return;
 
-    if (hdma->active && hdma->hblank_mode)
+    if (!hdma->mem->cgb)
+        return;
+
+    /*
+     * Cancel an active HBlank DMA transfer
+     * between blocks.
+     */
+    if (hdma->active)
     {
-        if (!(value & 0x80))
+        if (hdma->hblank_mode &&
+            !(value & 0x80) &&
+            !hdma->block_active)
         {
-            hdma->cancelled = 1;
             hdma->active = 0;
+            hdma->cancelled = 1;
+            hdma->stall_dots = 0;
+
+            hdma->mem->io[0x55] =
+                hdma_read_register(hdma, 0xFF55);
         }
 
         return;
     }
 
-    if (hdma->active)
-        return;
+    Mem *mem = hdma->mem;
 
-    hdma->source = get_source(hdma);
-    hdma->destination = get_destination(hdma);
+    hdma->source = (uint16_t)(((uint16_t)mem->io[0x51] << 8) |
+                              (mem->io[0x52] & 0xF0));
 
-    hdma->blocks_remaining = (value & 0x7F) + 1;
+    hdma->destination = (uint16_t)(0x8000 |
+                                   ((uint16_t)(mem->io[0x53] & 0x1F) << 8) |
+                                   (mem->io[0x54] & 0xF0));
+
+    hdma->blocks_remaining =
+        (uint8_t)((value & 0x7F) + 1);
+
+    hdma->hblank_mode =
+        (value & 0x80) != 0;
 
     hdma->active = 1;
     hdma->cancelled = 0;
-    hdma->hblank_mode = (value & 0x80) != 0;
+    hdma->block_active = 0;
 
-    /* LCD disabled: HDMA behaves as GDMA. */
-    if (!(hdma->mem->io[0x40] & 0x80))
+    hdma->bytes_transferred = 0;
+    hdma->dot_counter = 0;
+    hdma->stall_dots = 0;
+
+    /*
+     * Simplified LCD-disabled behavior:
+     * fall back to General Purpose DMA.
+     */
+    if (!(mem->io[0x40] & 0x80))
         hdma->hblank_mode = 0;
 
+    mem->io[0x55] =
+        hdma_read_register(hdma, 0xFF55);
+
+    /*
+     * GDMA begins immediately, but bytes are
+     * transferred only when hdma_tick() runs.
+     */
     if (!hdma->hblank_mode)
-    {
-        while (hdma->active)
-            hdma_transfer_block(hdma);
-    }
+        hdma_transfer_block(hdma);
 }
 
-static uint8_t hdma_read_source(Hdma *hdma, uint16_t addr)
-{
-    return mem_read(hdma->mem, addr);
-}
-
-static void hdma_write_vram(Hdma *hdma, uint16_t addr, uint8_t value)
-{
-    unsigned bank = hdma->mem->vbk & 1;
-
-    if (addr < VRAM_START || addr >= VRAM_END)
-        return;
-
-    hdma->mem->vram[bank][addr - VRAM_START] = value;
-}
-
-void hdma_transfer_block(Hdma *hdma)
-{
-    if (!hdma || !hdma->mem || !hdma->active)
-        return;
-
-    if (hdma->blocks_remaining == 0) {
-        hdma->active = 0;
-        return;
-    }
-
-    for (int i = 0; i < HDMA_BLOCK_SIZE; i++) {
-        uint8_t value = hdma_read_source(hdma, hdma->source);
-
-        hdma_write_vram(hdma, hdma->destination, value);
-
-        hdma->source++;
-        hdma->destination++;
-
-        if (hdma->destination >= VRAM_END)
-            hdma->destination = VRAM_START;
-    }
-
-    hdma->blocks_remaining--;
-
-    update_registers(hdma);
-    /* Stall CPU for the duration of one DMA block. */
-    hdma->stall_dots += HDMA_BLOCK_DOTS;
-
-    if (hdma->blocks_remaining == 0) {
-        hdma->active = 0;
-        hdma->hblank_mode = 0;
-        hdma->cancelled = 0;
-    }
-    else if (hdma->cancelled) {
-        hdma->active = 0;
-        hdma->hblank_mode = 0;
-    }
-}
-
+/*
+ * Called when the PPU enters HBlank.
+ */
 void hdma_hblank(Hdma *hdma)
 {
-    if (!hdma || !hdma->active || !hdma->hblank_mode)
+    if (!hdma || !hdma->active)
+        return;
+
+    if (!hdma->hblank_mode)
+        return;
+
+    if (hdma->block_active)
         return;
 
     hdma_transfer_block(hdma);
 }
 
-int hdma_is_active(const Hdma *hdma)
+/*
+ * Complete a 16-byte block.
+ */
+static void hdma_complete_block(Hdma *hdma)
 {
-    return hdma && hdma->active;
+    hdma->block_active = 0;
+    hdma->bytes_transferred = 0;
+    hdma->dot_counter = 0;
+    hdma->stall_dots = 0;
+
+    if (hdma->blocks_remaining > 0)
+        hdma->blocks_remaining--;
+
+    hdma_update_registers(hdma);
+
+    if (hdma->blocks_remaining == 0)
+    {
+        hdma_finish(hdma);
+        return;
+    }
+
+    hdma->mem->io[0x55] =
+        hdma_read_register(hdma, 0xFF55);
+
+    /*
+     * GDMA continues directly into the next block.
+     * HBlank DMA waits for the next visible HBlank.
+     */
+    if (!hdma->hblank_mode)
+        hdma_transfer_block(hdma);
 }
 
-int hdma_cpu_stalled(const Hdma *hdma)
+/*
+ * Transfer one byte from the source address
+ * into the selected VRAM bank.
+ */
+static void hdma_transfer_byte(Hdma *hdma)
 {
-    if (!hdma)
-        return 0;
+    uint8_t value = mem_read(
+        hdma->mem,
+        hdma->source);
 
-    return hdma->stall_dots > 0;
+    uint16_t offset =
+        hdma->destination & 0x1FFF;
+
+    hdma->mem->vram[hdma->vram_bank][offset] =
+        value;
+
+    hdma->source++;
+
+    hdma->destination = (uint16_t)(0x8000 |
+                                   ((hdma->destination + 1) & 0x1FFF));
+
+    hdma->bytes_transferred++;
+
+    if (hdma->bytes_transferred >= HDMA_BLOCK_SIZE)
+        hdma_complete_block(hdma);
 }
 
+/*
+ * Advance the progressive DMA controller.
+ *
+ * One byte is transferred every two PPU dots.
+ * A complete block requires 32 dots.
+ */
 void hdma_tick(Hdma *hdma, int dots)
 {
     if (!hdma || dots <= 0)
         return;
 
-    if ((uint32_t)dots >= hdma->stall_dots)
+    while (dots > 0 &&
+           hdma->active &&
+           hdma->block_active)
     {
-        hdma->stall_dots = 0;
+        dots--;
+
+        hdma->dot_counter++;
+
+        if (hdma->stall_dots > 0)
+            hdma->stall_dots--;
+
+        if (hdma->dot_counter >= HDMA_BYTE_DOTS)
+        {
+            hdma->dot_counter = 0;
+
+            hdma_transfer_byte(hdma);
+        }
     }
-    else
-    {
-        hdma->stall_dots -= (uint32_t)dots;
-    }
+}
+
+/*
+ * Return whether a DMA operation is active,
+ * including waiting between HBlank blocks.
+ */
+int hdma_is_active(const Hdma *hdma)
+{
+    return hdma && hdma->active;
+}
+
+/*
+ * The CPU is suspended only while a DMA block
+ * is actively being transferred.
+ */
+int hdma_cpu_stalled(const Hdma *hdma)
+{
+    return hdma &&
+           hdma->active &&
+           hdma->block_active;
 }

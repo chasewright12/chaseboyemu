@@ -119,52 +119,48 @@ static int emu_step(Emu *emu)
 
     apply_presses(emu);
 
-    /*
-     * Capture the CPU speed before executing
-     * the instruction or DMA stall.
-     */
     int double_speed = emu->mem.double_speed;
 
-    if (hdma_cpu_stalled(&emu->hdma))
+    /*
+    * Check whether DMA is currently suspending
+    * CPU instruction execution. (!important)
+    */
+   int dma_stalled = hdma_cpu_stalled(&emu->hdma);
+
+   if (dma_stalled)
+   {
+    cycles = 4;
+
+    emu->cpu.cycles += cycles;
+   }
+   else
+   {
+    cycles = cpu_step(&emu->cpu);
+
+    if (cycles < 0)
+        return -1;
+   }
+
+   timer_tick(&emu->mem, cycles);
+
+   int ppu_dots = double_speed
+        ? cycles / 2
+         : cycles;
+
+    if (dma_stalled)
     {
-        /*
-         * Advance one CPU machine cycle without
-         * executing an instruction.
-         */
-        cycles = 4;
+        for (int i = 0; i < ppu_dots; i++)
+        {
+            hdma_tick(&emu->hdma, 1);
 
-        int dots = double_speed
-                       ? cycles / 2
-                       : cycles;
-
-        hdma_tick(&emu->hdma, dots);
-
-        /*
-         * cpu_step() is not called during DMA,
-         * so account for elapsed cycles manually.
-         */
-        emu->cpu.cycles += cycles;
+            ppu_tick(&emu->ppu, 1);
+        }
     }
     else
     {
-        cycles = cpu_step(&emu->cpu);
-
-        if (cycles < 0)
-            return -1;
+        // CPU instructions are still executed atomically by the current CPU core.
+        ppu_tick(&emu->ppu, ppu_dots);
     }
-
-    /* Timer operates in CPU clock cycles. */
-    timer_tick(&emu->mem, cycles);
-
-    /*
-     * The PPU operates at its normal dot frequency,
-     * even when the CPU is in double-speed mode.
-     */
-    int ppu_dots = double_speed
-                       ? cycles / 2
-                       : cycles;
-
-    ppu_tick(&emu->ppu, ppu_dots);
 
     return cycles;
 }
