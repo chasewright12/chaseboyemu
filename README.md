@@ -178,15 +178,16 @@ A Python-based testing environment has been introduced using pytest and ctypes, 
 Current test coverage inclues:
 - **PPU FIFO**: Initialization, capacity, overflow, underflow, ordering, wraparound, metadata preservation, and mixed operations.
 - **PPU Fetcher**: Initialization, state transitions, tile fetching, bitplane decoding, CGB attributtes, tile flipping, signed addressing, Window map selection, and FIFO stalling.
+
 - **PPU Pipeline**: Dedicated test suite.
 - **PPU Rendering**: Dedicated test suite.
 - **Palette RAM**: Register behavior and palette memory tests.
 
 The test infrastructure compiles the relevant C sources into a temporary shared library, allowing Python tests to interact directly with the emulator's native implementation.
--**GDMA/HDMA**: Register behavior, 16-byte block transfers, VRAM bank selection, transfer completion, and cancellation.
--**HDMA and PPU integration**: Automatic transfers during visible HBlank periods and transfer restrictions during VBlank.
--**CPU Stall**: CPU execution suspension, program counter preservation, cycle accounting, and execution resumption.
--**Double-speed DMA timing**: CPU Stall duration validation in both normal and double-speed modes.
+- **GDMA/HDMA**: Register behavior, 16-byte block transfers, VRAM bank selection, transfer completion, and cancellation.
+- **HDMA and PPU integration**: Automatic transfers during visible HBlank periods and transfer restrictions during VBlank.
+- **CPU Stall**: CPU execution suspension, program counter preservation, cycle accounting, and execution resumption.
+- **Double-speed DMA timing**: CPU Stall duration validation in both normal and double-speed modes.
 
 ### CGB VRAM DMA Tests
 
@@ -244,15 +245,15 @@ Check the printed cartridge type and test ROM behavior. MBC3 RTC ticking/latchin
 - **Background palettes**: Support for eight sprite palettes, each containing four colors.
 - **KEY1 speed switching**: CGB double-speed mode support.
 - **OPRI register**: CGB object priority control.
--**CGB VRAM DMA Controller**: Dedicated DMA module with support for General Purpose DMA (GDMA) and HBlank DMA (HDMA).
--**HDMA Registers**: Implementation of the FF51-FF55 memory-mapped registers.
--**GDMA Transfers**: Continuous multi-block transfers into the selected VRAM bank.
--**HBlank DMA Transfers**: Automatic 16-byte block transfers during visible HBlank periods.
--**HDMA Cancellation**: Support for terminating active HBlank DMA transfers between blocks.
--**CPU Stall**: CPU instruction execution is suspended during DMA transfers while the PPU and timer continue advancing.
--**DMA Cycle Accounting**: Basic timing model using 32 PPU dots per block, equivalent to 32 CPU T-cycles in normal-speed mode and 64 in double-speed mode.
--**DMA and PPU Synchronization**: Integration with PPU mode transitions and the main emulator execution loop.
--**Automated DMA Validation**: Seven passing unit and integration tests covering DMA behavior and CPU suspension.
+- **CGB VRAM DMA Controller**: Dedicated DMA module with support for General Purpose DMA (GDMA) and HBlank DMA (HDMA).
+- **HDMA Registers**: Implementation of the FF51-FF55 memory-mapped registers.
+- **GDMA Transfers**: Continuous multi-block transfers into the selected VRAM bank.
+- **HBlank DMA Transfers**: Automatic 16-byte block transfers during visible HBlank periods.
+- **HDMA Cancellation**: Support for terminating active HBlank DMA transfers between blocks.
+- **CPU Stall**: CPU instruction execution is suspended during DMA transfers while the PPU and timer continue advancing.
+- **DMA Cycle Accounting**: Basic timing model using 32 PPU dots per block, equivalent to 32 CPU T-cycles in normal-speed mode and 64 in double-speed mode.
+- **DMA and PPU Synchronization**: Integration with PPU mode transitions and the main emulator execution loop.
+- **Automated DMA Validation**: Seven passing unit and integration tests covering DMA behavior and CPU suspension.
 
 ## 🗂️ Project structure
 
