@@ -23,4 +23,14 @@ roms/
 *~
 .DS_Store
 .text
-.txt.venv/
+.txt
+
+# Python virtual environments
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
