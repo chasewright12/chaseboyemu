@@ -23,4 +23,4 @@ roms/
 *~
 .DS_Store
 .text
-.txt
+.txt.venv/
